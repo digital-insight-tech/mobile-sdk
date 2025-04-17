@@ -1,6 +1,5 @@
-import type {
+import {
   AcceptProofRequestOptions,
-  Agent,
   CreateProofRequestOptions,
   DeclineProofRequestOptions,
   DefaultProofProtocols,
@@ -10,7 +9,11 @@ import type {
   ProposeProofOptions,
   RequestProofOptions,
   SelectCredentialsForProofRequestOptions,
-  SendProofProblemReportOptions,
+  SendProofProblemReportOptions
+} from '@credo-ts/didcomm'
+
+import type {
+  Agent,
 } from '@credo-ts/core'
 
 /**
@@ -21,7 +24,7 @@ import type {
  * @returns A Promise that resolves with the format data for the proof record.
  */
 export const getProofFormatData = async (agent: Agent, proofRecordId: string) => {
-  return agent.proofs.getFormatData(proofRecordId)
+  return agent.modules.proof.getFormatData(proofRecordId)
 }
 
 /**
@@ -35,7 +38,7 @@ export const getCredentialsForProofRequest = async <ProofProtocols extends Proof
   agent: Agent,
   options: GetCredentialsForProofRequestOptions<ProofProtocols>
 ) => {
-  return agent.proofs.getCredentialsForRequest(options)
+  return agent.modules.proof.getCredentialsForRequest(options)
 }
 
 /**
@@ -49,7 +52,7 @@ export const selectCredentialsForProofRequest = async <ProofProtocols extends Pr
   agent: Agent,
   options: SelectCredentialsForProofRequestOptions<ProofProtocols>
 ) => {
-  return agent.proofs.selectCredentialsForRequest(options)
+  return agent.modules.proof.selectCredentialsForRequest(options)
 }
 
 /**
@@ -60,7 +63,7 @@ export const selectCredentialsForProofRequest = async <ProofProtocols extends Pr
  * @returns A Promise that resolves to the proof request message.
  */
 export const getProofRequestAgentMessage = async (agent: Agent, proofRecordId: string) => {
-  return agent.proofs.findRequestMessage(proofRecordId)
+  return agent.modules.proof.findRequestMessage(proofRecordId)
 }
 
 /**
@@ -71,7 +74,7 @@ export const getProofRequestAgentMessage = async (agent: Agent, proofRecordId: s
  * @returns A promise that resolves with the proposed proof.
  */
 export const proposeProof = async (agent: Agent, options: ProposeProofOptions<DefaultProofProtocols>) => {
-  return agent.proofs.proposeProof(options)
+  return agent.modules.proof.proposeProof(options)
 }
 
 /**
@@ -82,7 +85,7 @@ export const proposeProof = async (agent: Agent, options: ProposeProofOptions<De
  * @returns A promise that resolves to the created proof request.
  */
 export const createProofRequest = async (agent: Agent, options: CreateProofRequestOptions<DefaultProofProtocols>) => {
-  return agent.proofs.createRequest(options)
+  return agent.modules.proof.createRequest(options)
 }
 
 /**
@@ -93,7 +96,7 @@ export const createProofRequest = async (agent: Agent, options: CreateProofReque
  * @returns A Promise that resolves with the ProofExchangeRecord
  */
 export const requestProof = async (agent: Agent, options: RequestProofOptions<DefaultProofProtocols>) => {
-  return agent.proofs.requestProof(options)
+  return agent.modules.proof.requestProof(options)
 }
 
 /**
@@ -104,7 +107,7 @@ export const requestProof = async (agent: Agent, options: RequestProofOptions<De
  * @returns void.
  */
 export const updateProofRecord = (agent: Agent, proofRecord: ProofExchangeRecord) => {
-  return agent.proofs.update(proofRecord)
+  return agent.modules.proof.update(proofRecord)
 }
 
 /**
@@ -118,7 +121,7 @@ export const acceptProofRequest = async <ProofProtocols extends ProofProtocol[] 
   agent: Agent,
   options: AcceptProofRequestOptions<ProofProtocols>
 ) => {
-  return agent.proofs.acceptRequest(options)
+  return agent.modules.proof.acceptRequest(options)
 }
 
 /**
@@ -129,7 +132,7 @@ export const acceptProofRequest = async <ProofProtocols extends ProofProtocol[] 
  * @returns A Promise that resolves ProofExchangeRecord of declining the proof request.
  */
 export const declineProofRequest = async (agent: Agent, options: DeclineProofRequestOptions) => {
-  return agent.proofs.declineRequest(options)
+  return agent.modules.proof.declineRequest(options)
 }
 
 /**
@@ -139,5 +142,5 @@ export const declineProofRequest = async (agent: Agent, options: DeclineProofReq
  * @returns A Promise that resolves ProofExchangeRecord when the problem report has been sent.
  */
 export const sendProofProblemReport = async (agent: Agent, options: SendProofProblemReportOptions) => {
-  return agent.proofs.sendProblemReport(options)
+  return agent.modules.proof.sendProblemReport(options)
 }

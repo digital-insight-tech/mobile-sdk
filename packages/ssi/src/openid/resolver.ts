@@ -10,7 +10,6 @@ import {
 } from '@credo-ts/core'
 import {
   OpenId4VciCredentialFormatProfile,
-  type OpenId4VciCredentialSupportedWithId,
   type OpenId4VciSupportedCredentialFormats,
 } from '@credo-ts/openid4vc'
 
@@ -149,7 +148,7 @@ export const receiveCredentialFromOpenId4VciOffer = async ({ agent, data, uri }:
   }
 
   const openId4VcMetadata = extractOpenId4VcCredentialMetadata(
-    resolvedCredentialOffer.offeredCredentials[0] as OpenId4VciCredentialSupportedWithId,
+    resolvedCredentialOffer.offeredCredentials[0],
     resolvedCredentialOffer.metadata
   )
 

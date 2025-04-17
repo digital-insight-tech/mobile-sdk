@@ -1,19 +1,19 @@
-import type { W3cCredentialRecord } from '@credo-ts/core'
-import type { OpenId4VcCredentialMetadata } from './metadata'
+import { ClaimFormat, Hasher, JsonTransformer, SdJwtVcRecord } from '@credo-ts/core'
 import type {
   CredentialDisplay,
   CredentialForDisplayId,
   CredentialIssuerDisplay,
+  DisplayImage,
   JffW3cCredentialJson,
   W3cCredentialDisplay,
   W3cCredentialJson,
 } from './openIdHelpers'
-
-import { ClaimFormat, Hasher, JsonTransformer, SdJwtVcRecord } from '@credo-ts/core'
 import { decodeSdJwtSync, getClaimsSync } from '@sd-jwt/decode'
-
-import { getOpenId4VcCredentialMetadata } from './metadata'
 import { getHostOpenIdNameFromUrl, sanitizeString } from './openIdHelpers'
+
+import type { OpenId4VcCredentialMetadata } from './metadata'
+import type { W3cCredentialRecord } from '@credo-ts/core'
+import { getOpenId4VcCredentialMetadata } from './metadata'
 
 export function findDisplay<Display extends { locale?: string }>(display?: Display[]): Display | undefined {
   if (!display) return undefined
@@ -28,27 +28,37 @@ export function findDisplay<Display extends { locale?: string }>(display?: Displ
 export function getIssuerDisplay(
   metadata: OpenId4VcCredentialMetadata | null | undefined
 ): Partial<CredentialIssuerDisplay> {
-  const issuerDisplay: Partial<CredentialIssuerDisplay> = {}
+  const issuerDisplay: Partial<CredentialIssuerDisplay> = {};
+
   // Try to extract from openid metadata first
-  const openidIssuerDisplay = findDisplay(metadata?.issuer.display)
-  issuerDisplay.name = openidIssuerDisplay?.name
+  const openidIssuerDisplay = findDisplay(
+    Array.isArray(metadata?.issuer?.display) ? metadata.issuer.display : undefined
+  );
+
+  issuerDisplay.name = openidIssuerDisplay?.name;
   issuerDisplay.logo = openidIssuerDisplay?.logo
     ? {
-        url: openidIssuerDisplay.logo?.url,
-        altText: openidIssuerDisplay.logo?.alt_text,
-      }
-    : undefined
+        url: openidIssuerDisplay.logo.url ?? '',
+        altText: openidIssuerDisplay.logo.alt_text ?? '',
+      } as DisplayImage
+    : {
+        url: '',
+        altText: '',
+      };
 
-  // If the credentialDisplay contains a logo, and the issuerDisplay does not, use the logo from the credentialDisplay
-  const openidCredentialDisplay = findDisplay(metadata?.credential.display)
-  if (openidCredentialDisplay && !issuerDisplay.logo && openidCredentialDisplay.logo) {
+  // Check and use credential display logo if issuerDisplay doesn't have one
+  const openidCredentialDisplay = findDisplay(
+    Array.isArray(metadata?.credential?.display) ? metadata.credential.display : undefined
+  );
+
+  if (openidCredentialDisplay && !issuerDisplay.logo?.url && openidCredentialDisplay.logo) {
     issuerDisplay.logo = {
-      url: openidCredentialDisplay.logo?.url,
-      altText: openidCredentialDisplay.logo?.alt_text,
-    }
+      url: openidCredentialDisplay.logo.url ?? '',
+      altText: openidCredentialDisplay.logo.alt_text ?? '',
+    };
   }
 
-  return issuerDisplay
+  return issuerDisplay;
 }
 
 export function processIssuerDisplay(
@@ -103,23 +113,27 @@ export function getCredentialDisplay(
   credentialPayload: Record<string, unknown>,
   openId4VcMetadata?: OpenId4VcCredentialMetadata | null
 ): Partial<CredentialDisplay> {
-  const credentialDisplay: Partial<CredentialDisplay> = {}
+  const credentialDisplay: Partial<CredentialDisplay> = {};
 
   if (openId4VcMetadata) {
-    const openidCredentialDisplay = findDisplay(openId4VcMetadata.credential.display)
-    credentialDisplay.name = openidCredentialDisplay?.name
-    credentialDisplay.description = openidCredentialDisplay?.description
-    credentialDisplay.textColor = openidCredentialDisplay?.text_color
-    credentialDisplay.backgroundColor = openidCredentialDisplay?.background_color
+    const credentialDisplays = openId4VcMetadata.credential?.display;
+    const openidCredentialDisplay = Array.isArray(credentialDisplays)
+      ? findDisplay(credentialDisplays)
+      : undefined;
+
+    credentialDisplay.name = openidCredentialDisplay?.name;
+    credentialDisplay.description = openidCredentialDisplay?.description;
+    credentialDisplay.textColor = openidCredentialDisplay?.text_color;
+    credentialDisplay.backgroundColor = openidCredentialDisplay?.background_color;
     credentialDisplay.backgroundImage = openidCredentialDisplay?.background_image
       ? {
           url: openidCredentialDisplay.background_image.url,
           altText: openidCredentialDisplay.background_image.alt_text,
         }
-      : undefined
+      : undefined;
   }
 
-  return credentialDisplay
+  return credentialDisplay;
 }
 
 export function getW3cCredentialDisplay(

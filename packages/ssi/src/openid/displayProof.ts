@@ -1,10 +1,9 @@
-import type { DifPexCredentialsForRequest } from '@credo-ts/core'
-import type { OpenId4VcSiopResolvedAuthorizationRequest } from '@credo-ts/openid4vc'
-import type { DisplayImage } from './openIdHelpers'
+import { filterAndMapSdJwtKeys, getCredentialForDisplay } from './display'
 
 import { ClaimFormat } from '@credo-ts/core'
-
-import { filterAndMapSdJwtKeys, getCredentialForDisplay } from './display'
+import type { DifPexCredentialsForRequest } from '@credo-ts/core'
+import type { DisplayImage } from './openIdHelpers'
+import type { OpenId4VpResolvedAuthorizationRequest } from '@credo-ts/openid4vc'
 
 export interface FormattedSubmission {
   name: string
@@ -13,7 +12,7 @@ export interface FormattedSubmission {
   entries: FormattedSubmissionEntry[]
 }
 
-export interface OpenId4VPRequestRecord extends OpenId4VcSiopResolvedAuthorizationRequest {
+export interface OpenId4VPRequestRecord extends OpenId4VpResolvedAuthorizationRequest {
   verifierHostName: string | undefined
   createdAt: string | Date
   credentialsForRequest: DifPexCredentialsForRequest | undefined
@@ -62,7 +61,7 @@ export function formatDifPexCredentialsForRequest(
           )
 
           let disclosedPayload = attributes
-          if (verifiableCredential.type === ClaimFormat.SdJwtVc) {
+          if (verifiableCredential.claimFormat === ClaimFormat.SdJwtVc) {
             disclosedPayload = filterAndMapSdJwtKeys(verifiableCredential.disclosedPayload).visibleProperties
           } /* else if (verifiableCredential.type === ClaimFormat.MsoMdoc) {
             disclosedPayload = Object.fromEntries(

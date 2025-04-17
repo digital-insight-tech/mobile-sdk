@@ -1,13 +1,22 @@
+import type { OpenId4VciCredentialConfigurationSupportedWithFormats, OpenId4VciCredentialIssuerMetadataDisplay } from '@credo-ts/openid4vc'
 import type { SdJwtVcRecord, W3cCredentialRecord } from '@credo-ts/core'
-import type { OpenId4VciCredentialSupported, OpenId4VciIssuerMetadataDisplay } from '@credo-ts/openid4vc'
+
+export type CredentialDisplayClaims =
+  | (OpenId4VciCredentialConfigurationSupportedWithFormats & {
+      format: 'vc+sd-jwt'
+    })['claims']
+  | (OpenId4VciCredentialConfigurationSupportedWithFormats & {
+      format: 'dc+sd-jwt'
+    })['claims']
 
 export interface OpenId4VcCredentialMetadata {
   credential: {
-    display?: OpenId4VciCredentialSupported['display']
-    order?: OpenId4VciCredentialSupported['order']
+    display?: OpenId4VciCredentialIssuerMetadataDisplay['display']
+    claims?: CredentialDisplayClaims
+    order?: OpenId4VciCredentialConfigurationSupportedWithFormats['order']
   }
   issuer: {
-    display?: OpenId4VciIssuerMetadataDisplay[]
+    display?: OpenId4VciCredentialIssuerMetadataDisplay[]
     id: string
   }
 }
@@ -15,7 +24,10 @@ export interface OpenId4VcCredentialMetadata {
 export const openId4VcCredentialMetadataKey = '_Adeya/openId4VcCredentialMetadata'
 
 export function extractOpenId4VcCredentialMetadata(
-  credentialMetadata: OpenId4VciCredentialSupported,
+  credentialMetadata: {
+    display?: OpenId4VciCredentialIssuerMetadataDisplay['display']
+    order?: OpenId4VciCredentialConfigurationSupportedWithFormats['order']
+  },
   // biome-ignore lint/suspicious/noExplicitAny: We need to use any here because the type is not exported from the package.
   serverMetadata: any
 ): OpenId4VcCredentialMetadata {

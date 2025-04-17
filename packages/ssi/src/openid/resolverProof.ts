@@ -1,14 +1,13 @@
 import type { Agent, DifPexCredentialsForRequest } from '@credo-ts/core'
-import type { OpenId4VcSiopVerifiedAuthorizationRequest } from '@credo-ts/openid4vc'
-import type { OpenId4VPRequestRecord } from './displayProof'
-import type { ParseInvitationResult } from './openIdHelpers'
-import type { OpenID4VCIParam } from './resolver'
 
-import { X509ModuleConfig } from '@credo-ts/core'
 import { Jwt } from '@credo-ts/core'
-import queryString from 'query-string'
-
+import type { OpenID4VCIParam } from './resolver'
+import type { OpenId4VPRequestRecord } from './displayProof'
+import { OpenId4VciResolvedAuthorizationRequest } from '@credo-ts/openid4vc'
+import type { ParseInvitationResult } from './openIdHelpers'
+import { X509ModuleConfig } from '@credo-ts/core'
 import { getHostOpenIdNameFromUrl } from './openIdHelpers'
+import queryString from 'query-string'
 
 function handleTextResponse(text: string): ParseInvitationResult {
   // If the text starts with 'ey' we assume it's a JWT and thus an OpenID authorization request
@@ -226,7 +225,7 @@ export const shareProof = async ({
   allowUntrustedCertificate = false,
 }: {
   agent: Agent
-  authorizationRequest: OpenId4VcSiopVerifiedAuthorizationRequest
+  authorizationRequest: OpenId4VciResolvedAuthorizationRequest
   credentialsForRequest: DifPexCredentialsForRequest
   selectedCredentials: Record<string, string>
   allowUntrustedCertificate?: boolean
@@ -253,7 +252,7 @@ export const shareProof = async ({
   try {
     // Temp solution to add and remove the trusted certicaite
     const certificate =
-      authorizationRequest.jwt && allowUntrustedCertificate ? extractCertificateFromJwt(authorizationRequest.jwt) : null
+      authorizationRequest && allowUntrustedCertificate ? extractCertificateFromJwt(authorizationRequest.authorizationFlow) : null
 
     const result = await withTrustedCertificate(agent, certificate, () =>
       agent.modules.openId4VcHolder.acceptSiopAuthorizationRequest({
@@ -263,12 +262,6 @@ export const shareProof = async ({
         },
       })
     )
-
-    // // if redirect_uri is provided, open it in the browser
-    // // Even if the response returned an error, we must open this uri
-    // if (typeof result.serverResponse.body === 'object' && typeof result.serverResponse.body.redirect_uri === 'string') {
-    //   await Linking.openURL(result.serverResponse.body.redirect_uri)
-    // }
 
     if (result.serverResponse.status < 200 || result.serverResponse.status > 299) {
       throw new Error(`Error while accepting authorization request. ${result.serverResponse.body as string}`)

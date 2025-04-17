@@ -1,7 +1,8 @@
-import type { InitConfig, MediatorPickupStrategy } from '@credo-ts/core'
-import type { AgentModulesInput } from '@credo-ts/core/build/agent/AgentModules'
-import type { IndyVdrPoolConfig } from '@credo-ts/indy-vdr'
-
+import {
+  Agent,
+  DidsModule,
+  WebDidResolver
+} from '@credo-ts/core'
 import {
   AnonCredsCredentialFormatService,
   AnonCredsModule,
@@ -12,35 +13,23 @@ import {
   V1CredentialProtocol,
   V1ProofProtocol,
 } from '@credo-ts/anoncreds'
-import { AskarModule } from '@credo-ts/askar'
-import {
-  Agent,
-  AutoAcceptCredential,
-  AutoAcceptProof,
-  ConnectionsModule,
-  CredentialsModule,
-  DidsModule,
-  DifPresentationExchangeProofFormatService,
-  HttpOutboundTransport,
-  JsonLdCredentialFormatService,
-  MediationRecipientModule,
-  ProofsModule,
-  V2CredentialProtocol,
-  V2ProofProtocol,
-  WebDidResolver,
-  WsOutboundTransport,
-} from '@credo-ts/core'
+import { AutoAcceptCredential, AutoAcceptProof, BasicMessagesModule, ConnectionsModule, CredentialsModule, DidCommModule, DifPresentationExchangeProofFormatService, DiscoverFeaturesModule, HttpOutboundTransport, JsonLdCredentialFormatService, MediationRecipientModule, MediatorPickupStrategy, MessagePickupModule, OutOfBandModule, ProofsModule, V2CredentialProtocol, V2ProofProtocol, WsOutboundTransport } from '@credo-ts/didcomm'
 import {
   IndyVdrAnonCredsRegistry,
   IndyVdrIndyDidResolver,
   IndyVdrModule,
   IndyVdrSovDidResolver,
 } from '@credo-ts/indy-vdr'
-import { PushNotificationsFcmModule } from '@credo-ts/push-notifications'
+
+import type { AgentModulesInput } from '@credo-ts/core/build/agent/AgentModules'
+import { AskarModule } from '@credo-ts/askar'
+import type { IndyVdrPoolConfig } from '@credo-ts/indy-vdr'
+import type { InitConfig } from '@credo-ts/core'
+// import { PushNotificationsFcmModule } from '@credo-ts/push-notifications'
 import { QuestionAnswerModule } from '@credo-ts/question-answer'
 import { agentDependencies } from '@credo-ts/react-native'
 import { anoncreds } from '@hyperledger/anoncreds-react-native'
-import { ariesAskar } from '@hyperledger/aries-askar-react-native'
+import { askar } from '@openwallet-foundation/askar-react-native'
 import { indyVdr } from '@hyperledger/indy-vdr-react-native'
 
 export type AdeyaAgentModuleOptions = {
@@ -50,6 +39,10 @@ export type AdeyaAgentModuleOptions = {
   maximumMessagePickup?: number
 }
 
+export type AdeyaAgentModules = ReturnType<typeof getAgentModules>
+
+export type AdeyaAgent = Agent<AdeyaAgentModules>
+
 export const getAgentModules = ({
   mediatorInvitationUrl,
   mediatorPickupStrategy,
@@ -58,7 +51,7 @@ export const getAgentModules = ({
 }: AdeyaAgentModuleOptions) => {
   return {
     askar: new AskarModule({
-      ariesAskar,
+      askar,
     }),
     anoncreds: new AnonCredsModule({
       registries: [new IndyVdrAnonCredsRegistry()],
@@ -77,6 +70,7 @@ export const getAgentModules = ({
       indyVdr,
       networks: indyNetworks,
     }),
+    didcomm: new DidCommModule(),
     credentials: new CredentialsModule({
       autoAcceptCredentials: AutoAcceptCredential.ContentApproved,
       credentialProtocols: [
@@ -111,7 +105,11 @@ export const getAgentModules = ({
     connections: new ConnectionsModule({
       autoAcceptConnections: true,
     }),
-    pushNotificationsFcm: new PushNotificationsFcmModule(),
+    basicMessages: new BasicMessagesModule(),
+    outOfBand: new OutOfBandModule(),
+    messagePickup: new MessagePickupModule(),
+    discovery: new DiscoverFeaturesModule(),
+    // pushNotificationsFcm: new PushNotificationsFcmModule(),
     questionAnswer: new QuestionAnswerModule(),
   }
 }
@@ -121,7 +119,7 @@ export const initializeAgent = async ({
   modules,
 }: {
   agentConfig: InitConfig
-  modules: AgentModulesInput
+  modules: AdeyaAgentModules
 }) => {
   const agent = new Agent({
     dependencies: agentDependencies,
@@ -132,8 +130,8 @@ export const initializeAgent = async ({
     modules,
   })
 
-  agent.registerOutboundTransport(new HttpOutboundTransport())
-  agent.registerOutboundTransport(new WsOutboundTransport())
+  agent.modules.didcomm.registerOutboundTransport(new HttpOutboundTransport())
+  agent.modules.didcomm.registerOutboundTransport(new WsOutboundTransport())
 
   await agent.initialize()
 

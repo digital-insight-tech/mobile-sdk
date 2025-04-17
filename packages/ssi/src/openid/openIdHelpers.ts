@@ -1,6 +1,3 @@
-import type { Agent, CredentialExchangeRecord } from '@credo-ts/core'
-import type { CredentialMetadata } from './displayProof'
-
 import {
   ClaimFormat,
   SdJwtVcRecord,
@@ -9,6 +6,9 @@ import {
   W3cCredentialRepository,
 } from '@credo-ts/core'
 
+import type { Agent } from '@credo-ts/core'
+import { CredentialExchangeRecord } from '@credo-ts/didcomm'
+import type { CredentialMetadata } from './displayProof'
 import { getOID4VCCredentialsForProofRequest } from './resolverProof'
 
 export type GenericCredentialExchangeRecord = CredentialExchangeRecord | W3cCredentialRecord | SdJwtVcRecord
@@ -129,7 +129,7 @@ export interface CredentialDisplay {
 export interface CredentialIssuerDisplay {
   name: string
   locale?: string
-  logo?: DisplayImage
+  logo?: DisplayImage  | undefined
 }
 
 export function getHostOpenIdNameFromUrl(url: string) {
