@@ -23,7 +23,6 @@
     "compile": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@credebl/ssi-mobile": "link:",
     "@credo-ts/anoncreds": "0.6.0-alpha-20250325224513",
     "@credo-ts/askar": "0.6.0-alpha-20250325224513",
     "@credo-ts/core": "0.6.0-alpha-20250325224513",
