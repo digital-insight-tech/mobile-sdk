@@ -7,7 +7,7 @@ import {
 } from '@credo-ts/core'
 
 import type { Agent } from '@credo-ts/core'
-import { CredentialExchangeRecord } from '@credo-ts/didcomm'
+import type { CredentialExchangeRecord } from '@credo-ts/didcomm'
 import type { CredentialMetadata } from './displayProof'
 import { getOID4VCCredentialsForProofRequest } from './resolverProof'
 
@@ -130,6 +130,7 @@ export interface CredentialIssuerDisplay {
   name: string
   locale?: string
   logo?: DisplayImage  | undefined
+  domain?: string | undefined
 }
 
 export function getHostOpenIdNameFromUrl(url: string) {

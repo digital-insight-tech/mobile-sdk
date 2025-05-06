@@ -107,14 +107,13 @@ import {
 //   ProofFormatDataMessagePayload,
 // } from '@credo-ts/core'
 // Indy VDR
-import {
-  IndyVdrAnonCredsRegistry,
-  IndyVdrIndyDidResolver,
-  IndyVdrModule,
-  IndyVdrPoolConfig,
-  IndyVdrSovDidResolver,
-} from '@credo-ts/indy-vdr'
-import { OpenId4VcHolderModule } from '@credo-ts/openid4vc'
+import { 
+  OpenId4VcHolderModule, 
+  OpenId4VciRequestTokenResponse,
+  OpenId4VciResolvedCredentialOffer, 
+  OpenId4VciAuthorizationFlow,
+  OpenId4VciTxCode,
+  OpenId4VciResolvedAuthorizationRequest } from '@credo-ts/openid4vc'
 import { PushNotificationsFcmModule } from '@credo-ts/push-notifications'
 // Q&A
 import {
@@ -233,8 +232,6 @@ export {
   V1ProofProtocol,
   AnonCredsCredentialInfo,
 }
-// Indy Vdr
-export { IndyVdrAnonCredsRegistry, IndyVdrPoolConfig, IndyVdrIndyDidResolver, IndyVdrModule, IndyVdrSovDidResolver }
 // Askar
 export { AskarModule }
 // Push Notifications
@@ -244,4 +241,13 @@ export { QuestionAnswerRecord, QuestionAnswerEventTypes, QuestionAnswerStateChan
 //Basic message
 export { BasicMessageEventTypes, BasicMessageStateChangedEvent, BasicMessageRecord }
 //openIDC4VCI
-export { OpenId4VcHolderModule, recordsAddedByType, recordsRemovedByType }
+export { 
+  OpenId4VcHolderModule, 
+  OpenId4VciRequestTokenResponse,
+  OpenId4VciAuthorizationFlow,
+  OpenId4VciResolvedCredentialOffer, 
+  OpenId4VciResolvedAuthorizationRequest, 
+  OpenId4VciTxCode,
+  recordsAddedByType, 
+  recordsRemovedByType 
+}

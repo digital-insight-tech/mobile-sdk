@@ -1,6 +1,3 @@
-// NOTE: We need to import these to be able to use the AskarWallet in this file.
-import '@hyperledger/aries-askar-react-native'
-
 import {
   Agent,
   ConsoleLogger,
@@ -11,7 +8,7 @@ import {
 import { HttpOutboundTransport, WsOutboundTransport } from '@credo-ts/didcomm'
 import type { InitConfig, WalletConfig, WalletExportImportConfig } from '@credo-ts/core'
 
-import { AdeyaAgentModules } from '../agent'
+import type { AdeyaAgentModules } from '../agent'
 import { AskarWallet } from '@credo-ts/askar'
 import { agentDependencies } from '@credo-ts/react-native'
 

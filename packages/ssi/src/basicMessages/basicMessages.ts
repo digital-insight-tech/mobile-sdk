@@ -1,4 +1,4 @@
-import { AdeyaAgent } from '../agent'
+import type { AdeyaAgent } from '../agent'
 
 /**
  * Sends a basic message to the connection with the given connection id.

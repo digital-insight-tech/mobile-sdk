@@ -1,11 +1,11 @@
 import {
   Agent,
   DidsModule,
-  WebDidResolver
+  WebDidResolver,
+  X509Module
 } from '@credo-ts/core'
 import {
   AnonCredsCredentialFormatService,
-  AnonCredsModule,
   AnonCredsProofFormatService,
   DataIntegrityCredentialFormatService,
   LegacyIndyCredentialFormatService,
@@ -13,29 +13,17 @@ import {
   V1CredentialProtocol,
   V1ProofProtocol,
 } from '@credo-ts/anoncreds'
-import { AutoAcceptCredential, AutoAcceptProof, BasicMessagesModule, ConnectionsModule, CredentialsModule, DidCommModule, DifPresentationExchangeProofFormatService, DiscoverFeaturesModule, HttpOutboundTransport, JsonLdCredentialFormatService, MediationRecipientModule, MediatorPickupStrategy, MessagePickupModule, OutOfBandModule, ProofsModule, V2CredentialProtocol, V2ProofProtocol, WsOutboundTransport } from '@credo-ts/didcomm'
-import {
-  IndyVdrAnonCredsRegistry,
-  IndyVdrIndyDidResolver,
-  IndyVdrModule,
-  IndyVdrSovDidResolver,
-} from '@credo-ts/indy-vdr'
-
-import type { AgentModulesInput } from '@credo-ts/core/build/agent/AgentModules'
+import { AutoAcceptCredential, AutoAcceptProof, BasicMessagesModule, ConnectionsModule, CredentialsModule, DidCommModule, DifPresentationExchangeProofFormatService, DiscoverFeaturesModule, HttpOutboundTransport, JsonLdCredentialFormatService, MediationRecipientModule, type MediatorPickupStrategy, MessagePickupModule, OutOfBandModule, ProofsModule, V2CredentialProtocol, V2ProofProtocol, WsOutboundTransport } from '@credo-ts/didcomm'
 import { AskarModule } from '@credo-ts/askar'
-import type { IndyVdrPoolConfig } from '@credo-ts/indy-vdr'
 import type { InitConfig } from '@credo-ts/core'
-// import { PushNotificationsFcmModule } from '@credo-ts/push-notifications'
 import { QuestionAnswerModule } from '@credo-ts/question-answer'
 import { agentDependencies } from '@credo-ts/react-native'
-import { anoncreds } from '@hyperledger/anoncreds-react-native'
 import { askar } from '@openwallet-foundation/askar-react-native'
-import { indyVdr } from '@hyperledger/indy-vdr-react-native'
+import { OpenId4VcHolderModule } from '@credo-ts/openid4vc'
 
 export type AdeyaAgentModuleOptions = {
-  mediatorInvitationUrl: string
-  mediatorPickupStrategy: MediatorPickupStrategy
-  indyNetworks: [IndyVdrPoolConfig, ...IndyVdrPoolConfig[]]
+  mediatorInvitationUrl?: string
+  mediatorPickupStrategy?: MediatorPickupStrategy
   maximumMessagePickup?: number
 }
 
@@ -43,32 +31,14 @@ export type AdeyaAgentModules = ReturnType<typeof getAgentModules>
 
 export type AdeyaAgent = Agent<AdeyaAgentModules>
 
-export const getAgentModules = ({
-  mediatorInvitationUrl,
-  mediatorPickupStrategy,
-  indyNetworks,
-  maximumMessagePickup = 5,
-}: AdeyaAgentModuleOptions) => {
-  return {
+export const getAgentModules = (options?: AdeyaAgentModuleOptions) => {
+  const modules = {
     askar: new AskarModule({
       askar,
     }),
-    anoncreds: new AnonCredsModule({
-      registries: [new IndyVdrAnonCredsRegistry()],
-      anoncreds,
-    }),
-    mediationRecipient: new MediationRecipientModule({
-      mediatorInvitationUrl,
-      mediatorPickupStrategy,
-      maximumMessagePickup,
-    }),
     dids: new DidsModule({
       registrars: [],
-      resolvers: [new WebDidResolver(), new IndyVdrSovDidResolver(), new IndyVdrIndyDidResolver()],
-    }),
-    indyVdr: new IndyVdrModule({
-      indyVdr,
-      networks: indyNetworks,
+      resolvers: [new WebDidResolver()],
     }),
     didcomm: new DidCommModule(),
     credentials: new CredentialsModule({
@@ -109,9 +79,24 @@ export const getAgentModules = ({
     outOfBand: new OutOfBandModule(),
     messagePickup: new MessagePickupModule(),
     discovery: new DiscoverFeaturesModule(),
-    // pushNotificationsFcm: new PushNotificationsFcmModule(),
     questionAnswer: new QuestionAnswerModule(),
+    openId4VcHolder: new OpenId4VcHolderModule(),
+    x509: new X509Module()
   }
+
+  // Only add mediation if options are provided
+  if (options?.mediatorInvitationUrl && options?.mediatorPickupStrategy) {
+    return {
+      ...modules,
+      mediationRecipient: new MediationRecipientModule({
+        mediatorInvitationUrl: options.mediatorInvitationUrl,
+        mediatorPickupStrategy: options.mediatorPickupStrategy,
+        maximumMessagePickup: options.maximumMessagePickup ?? 5,
+      })
+    }
+  }
+
+  return modules
 }
 
 export const initializeAgent = async ({
@@ -129,7 +114,7 @@ export const initializeAgent = async ({
     },
     modules,
   })
-
+  
   agent.modules.didcomm.registerOutboundTransport(new HttpOutboundTransport())
   agent.modules.didcomm.registerOutboundTransport(new WsOutboundTransport())
 
