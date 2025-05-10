@@ -25,7 +25,7 @@ export interface OpenId4VcCredentialMetadata {
   }
 }
 
-const openId4VcCredentialMetadataKey = '_credebl/openId4VcCredentialMetadata'
+export const openId4VcCredentialMetadataKey = '_credebl/openId4VcCredentialMetadata'
 
 export function extractOpenId4VcCredentialMetadata(
   credentialMetadata: OpenId4VciCredentialConfigurationSupportedWithFormats,

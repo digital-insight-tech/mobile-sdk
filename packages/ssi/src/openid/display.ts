@@ -1,26 +1,62 @@
-import { ClaimFormat, Hasher, JsonTransformer, SdJwtVcRecord } from '@credo-ts/core'
+import { ClaimFormat, JsonTransformer, SdJwtVcRecord, type SdJwtVcTypeMetadata, type SingleOrArray } from '@credo-ts/core'
 import type {
   CredentialDisplay,
   CredentialForDisplayId,
   CredentialIssuerDisplay,
   DisplayImage,
   JffW3cCredentialJson,
-  W3cCredentialDisplay,
   W3cCredentialJson,
 } from './openIdHelpers'
-import { decodeSdJwtSync, getClaimsSync } from '@sd-jwt/decode'
 import { getHostOpenIdNameFromUrl, sanitizeString } from './openIdHelpers'
 
 import type { OpenId4VcCredentialMetadata } from './metadata'
-import type { W3cCredentialRecord } from '@credo-ts/core'
+import { type JwkJson, type MdocRecord, W3cCredentialRecord } from '@credo-ts/core'
 import { getOpenId4VcCredentialMetadata } from './metadata'
 import { getHostNameFromUrl } from '../utils/url'
+import { type CredentialMetadata, type FormattedSubmissionEntrySatisfiedCredential, getAttributesAndMetadataForSdJwtPayload, recursivelyMapAttributes, safeCalculateJwkThumbprint } from './displayProof'
+import { formatDate } from '../utils/format'
+import { getRefreshCredentialMetadata } from './refreshMetadata'
 
-export function findDisplay<Display extends { locale?: string }>(display?: Display[]): Display | undefined {
+export interface CredentialCategoryMetadata {
+  /**
+   *
+   */
+  credentialCategory: string
+
+  /**
+   * Whether this instance of the canonical records should be displayed by default
+   */
+  displayPriority?: boolean
+
+  /**
+   * @default true
+   */
+  canDeleteCredential?: boolean
+
+  // TODO: we can also store here the key binding requirements, and whether we need to sign
+  // locally or remotely (so we can show PIN)
+}
+
+
+export interface CredentialForDisplay {
+  id: CredentialForDisplayId
+  createdAt: Date
+  display: CredentialDisplay
+  attributes: Record<string, unknown>
+  rawAttributes: Record<string, unknown>
+  metadata: CredentialMetadata
+  claimFormat: ClaimFormat.SdJwtVc | ClaimFormat.MsoMdoc | ClaimFormat.JwtVc | ClaimFormat.LdpVc
+  record: W3cCredentialRecord | MdocRecord | SdJwtVcRecord
+
+  category: CredentialCategoryMetadata | null
+  hasRefreshToken: boolean
+}
+
+function findDisplay<Display extends { locale?: string; lang?: string }>(display?: Display[]): Display | undefined {
   if (!display) return undefined
 
-  let item = display.find((d) => d.locale?.startsWith('en-'))
-  if (!item) item = display.find((d) => !d.locale)
+  let item = display.find((d) => d.locale?.startsWith('en-') || d.lang?.startsWith('en-'))
+  if (!item) item = display.find((d) => !d.locale && !d.lang)
   if (!item) item = display[0]
 
   return item
@@ -180,30 +216,58 @@ export function getW3cCredentialDisplay(
   }
 }
 
+export function getSdJwtTypeMetadataCredentialDisplay(
+  sdJwtTypeMetadata: SdJwtVcTypeMetadata
+): Omit<CredentialDisplay, 'issuer' | 'name'> & { name?: string } {
+  const typeMetadataDisplay = findDisplay(sdJwtTypeMetadata.display)
+
+  // TODO: support SVG rendering method
+
+  const credentialDisplay = {
+    name: typeMetadataDisplay?.name,
+    description: typeMetadataDisplay?.description,
+    textColor: typeMetadataDisplay?.rendering?.simple?.text_color,
+    backgroundColor: typeMetadataDisplay?.rendering?.simple?.background_color,
+    backgroundImage: typeMetadataDisplay?.rendering?.simple?.logo
+      ? {
+          url: typeMetadataDisplay?.rendering?.simple?.logo.uri,
+          altText: typeMetadataDisplay?.rendering?.simple?.logo.alt_text,
+        }
+      : undefined,
+  }
+
+  return credentialDisplay
+}
+
 export function getSdJwtCredentialDisplay(
   credentialPayload: Record<string, unknown>,
-  openId4VcMetadata?: OpenId4VcCredentialMetadata | null
+  openId4VcMetadata?: OpenId4VcCredentialMetadata | null,
+  typeMetadata?: SdJwtVcTypeMetadata | null
 ) {
-  const credentialDisplay: Partial<CredentialDisplay> = getCredentialDisplay(credentialPayload, openId4VcMetadata)
+  let credentialDisplay: Partial<CredentialDisplay> = {}
 
+  // TODO: should we combine them? I think not really needed if you have one of them
+  // Type metadata takes precendence.
+  if (typeMetadata) {
+    credentialDisplay = getSdJwtTypeMetadataCredentialDisplay(typeMetadata)
+  } else if (openId4VcMetadata) {
+    credentialDisplay = getOpenId4VcCredentialDisplay(openId4VcMetadata)
+  }
+
+  // If there's no name for the credential, we extract it from the last type
+  // and sanitize it. This is not optimal. But provides at least something.
   if (!credentialDisplay.name && typeof credentialPayload.vct === 'string') {
     credentialDisplay.name = sanitizeString(credentialPayload.vct)
   }
 
   return {
     ...credentialDisplay,
+    // Last fallback, if there's really no name for the credential, we use a generic name
+    // TODO: use on-device AI to determine a name for the credential based on the credential data
     name: credentialDisplay.name ?? 'Credential',
   }
 }
 
-interface CredentialMetadata {
-  type: string
-  issuer: string
-  holder: string | Record<string, unknown>
-  validUntil?: Date
-  validFrom?: Date
-  issuedAt?: Date
-}
 
 export function filterAndMapSdJwtKeys(sdJwtVcPayload: Record<string, unknown>) {
   type SdJwtVcPayload = {
@@ -215,88 +279,173 @@ export function filterAndMapSdJwtKeys(sdJwtVcPayload: Record<string, unknown>) {
     exp?: number
     [key: string]: unknown
   }
+  // TODO: We should map these claims to nice format and names
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { _sd_alg, _sd_hash, iss, vct, cnf, iat, exp, nbf, ...visibleProperties } = sdJwtVcPayload as SdJwtVcPayload
 
+  const holder = cnf.kid ?? cnf.jwk ? safeCalculateJwkThumbprint(cnf.jwk as JwkJson) : undefined
   const credentialMetadata: CredentialMetadata = {
     type: vct,
     issuer: iss,
-    holder: cnf,
+    holder,
   }
 
   if (iat) {
-    credentialMetadata.issuedAt = new Date(iat * 1000)
+    credentialMetadata.issuedAt = formatDate(new Date(iat * 1000))
   }
   if (exp) {
-    credentialMetadata.validUntil = new Date(exp * 1000)
+    credentialMetadata.validUntil = formatDate(new Date(exp * 1000))
   }
   if (nbf) {
-    credentialMetadata.validFrom = new Date(nbf * 1000)
+    credentialMetadata.validFrom = formatDate(new Date(nbf * 1000))
   }
 
   return {
-    visibleProperties,
+    visibleProperties: Object.fromEntries(
+      Object.entries(visibleProperties).map(([key, value]) => [key, recursivelyMapAttributes(value)])
+    ),
     metadata: credentialMetadata,
+    raw: {
+      issuedAt: iat ? new Date(iat * 1000) : undefined,
+      validUntil: exp ? new Date(exp * 1000) : undefined,
+      validFrom: nbf ? new Date(nbf * 1000) : undefined,
+    },
   }
 }
 
-export function getCredentialForDisplaySdJwt(
-  credentialRecord: SdJwtVcRecord,
-  metadata: OpenId4VcCredentialMetadata | null
-): W3cCredentialDisplay {
-  const { disclosures, jwt } = decodeSdJwtSync(credentialRecord.compactSdJwtVc, (data, alg) => Hasher.hash(data, alg))
-  const decodedPayload: Record<string, unknown> = getClaimsSync(jwt.payload, disclosures, (data, alg) =>
-    Hasher.hash(data, alg)
-  )
+const credentialCategoryMetadataKey = '_credebl/credentialCategoryMetadata'
 
-  const issuerDisplay = getSdJwtIssuerDisplay(metadata)
-  const credentialDisplay = getSdJwtCredentialDisplay(decodedPayload, metadata)
+export function getCredentialCategoryMetadata(
+  credentialRecord: W3cCredentialRecord | SdJwtVcRecord | MdocRecord
+): CredentialCategoryMetadata | null {
+  return credentialRecord.metadata.get(credentialCategoryMetadataKey)
+}
 
-  return {
-    id: `sd-jwt-vc-${credentialRecord.id}` as CredentialForDisplayId,
-    createdAt: credentialRecord.createdAt,
-    display: {
-      ...credentialDisplay,
-      issuer: issuerDisplay,
-    },
-    attributes: filterAndMapSdJwtKeys(decodedPayload).visibleProperties,
+export function getCredentialForDisplayId(
+  credentialRecord: W3cCredentialRecord | SdJwtVcRecord | MdocRecord
+): CredentialForDisplayId {
+  if (credentialRecord instanceof SdJwtVcRecord) {
+    return `sd-jwt-vc-${credentialRecord.id}`
   }
+  if (credentialRecord instanceof W3cCredentialRecord) {
+    return `w3c-credential-${credentialRecord.id}`
+  }
+
+  throw new Error('Unsupported credential record type')
+}
+
+export function getDisclosedAttributeNamesForDisplay(credential: FormattedSubmissionEntrySatisfiedCredential) {
+  // FIXME: this implementation in still too naive
+  // TODO: use the credential claim metadata (sd-jwt / oid4vc) to get labels for attribute paths
+  // TODO: we miss e.g. showing age_equal_or_over.21 as Age Over 21, but with the display metadata
+  // from bdr we can at least show it as: Age verification. If there is a key for a nested path we can
+  // also decide to include it
+
+  // For mdoc we remove the namespaces
+  if (credential.credential.claimFormat === ClaimFormat.MsoMdoc) {
+    return Array.from(new Set(credential.disclosed.paths.map((path) => sanitizeString(path[1]))))
+  }
+
+  // Otherwise we take the top-level keys
+  return Array.from(
+    new Set(
+      credential.disclosed.paths
+        .filter((path): path is [string] => typeof path[0] === 'string')
+        .map((path) => sanitizeString(path[0]))
+    )
+  )
 }
 
 export function getCredentialForDisplay(
-  // TODO Will update when will give support to MdocRecord
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  credentialRecord: W3cCredentialRecord | SdJwtVcRecord | any
-): W3cCredentialDisplay {
-  const openId4VcMetadata = getOpenId4VcCredentialMetadata(credentialRecord)
+  credentialRecord: W3cCredentialRecord | SdJwtVcRecord | MdocRecord
+): CredentialForDisplay {
+  const credentialCategoryMetadata = getCredentialCategoryMetadata(credentialRecord)
+  const credentialForDisplayId = getCredentialForDisplayId(credentialRecord)
+  const hasRefreshToken = getRefreshCredentialMetadata(credentialRecord) !== null
 
   if (credentialRecord instanceof SdJwtVcRecord) {
-    return getCredentialForDisplaySdJwt(credentialRecord, openId4VcMetadata)
+    const sdJwtVc = credentialRecord.credential
+
+    const openId4VcMetadata = getOpenId4VcCredentialMetadata(credentialRecord)
+    const sdJwtTypeMetadata = credentialRecord.typeMetadata
+    const issuerDisplay = getOpenId4VcIssuerDisplay(openId4VcMetadata)
+
+    const credentialDisplay = getSdJwtCredentialDisplay(sdJwtVc.prettyClaims, openId4VcMetadata, sdJwtTypeMetadata)
+    const { attributes, metadata } = getAttributesAndMetadataForSdJwtPayload(sdJwtVc.prettyClaims)
+
+    return {
+      id: credentialForDisplayId,
+      createdAt: credentialRecord.createdAt,
+      display: {
+        ...credentialDisplay,
+        issuer: issuerDisplay,
+      },
+      attributes: {},
+      rawAttributes: attributes,
+      metadata,
+      claimFormat: ClaimFormat.SdJwtVc,
+      record: credentialRecord,
+      category: credentialCategoryMetadata,
+      hasRefreshToken,
+    }
+  }
+  if (credentialRecord instanceof W3cCredentialRecord) {
+    const credential = JsonTransformer.toJSON(
+      credentialRecord.credential.claimFormat === ClaimFormat.JwtVc
+        ? credentialRecord.credential.credential
+        : credentialRecord.credential.toJson()
+    ) as W3cCredentialJson
+
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    const proof = (credential as any).proof as SingleOrArray<{
+      type: string
+      cryptosuite?: string
+      verificationMethod?: string
+    }>
+    const firstProof = Array.isArray(proof) ? proof[0] : proof
+    const isAnonCreds = firstProof.cryptosuite === 'anoncreds-2023'
+
+    let type = credentialRecord.credential.type[credentialRecord.credential.type.length - 1]
+    if (isAnonCreds) {
+      type = firstProof.verificationMethod ?? type
+    }
+
+    const openId4VcMetadata = getOpenId4VcCredentialMetadata(credentialRecord)
+    const issuerDisplay = getW3cIssuerDisplay(credential, openId4VcMetadata)
+    const credentialDisplay = getW3cCredentialDisplay(credential, openId4VcMetadata)
+
+    // FIXME: support credential with multiple subjects
+    const credentialAttributes = Array.isArray(credential.credentialSubject)
+      ? credential.credentialSubject[0] ?? {}
+      : credential.credentialSubject
+
+    return {
+      id: credentialForDisplayId,
+      createdAt: credentialRecord.createdAt,
+      display: {
+        ...credentialDisplay,
+        issuer: issuerDisplay,
+      },
+      attributes: credentialAttributes,
+      rawAttributes: credentialAttributes,
+      metadata: {
+        holder: credentialRecord.credential.credentialSubjectIds[0],
+        issuer: credentialRecord.credential.issuerId,
+        type,
+        issuedAt: new Date(credentialRecord.credential.issuanceDate).toISOString(),
+        validUntil: credentialRecord.credential.expirationDate
+          ? new Date(credentialRecord.credential.expirationDate).toISOString()
+          : undefined,
+        validFrom: new Date(credentialRecord.credential.issuanceDate).toISOString(),
+      },
+      claimFormat: credentialRecord.credential.claimFormat,
+      record: credentialRecord,
+      category: credentialCategoryMetadata,
+      hasRefreshToken,
+    }
   }
 
-  const credential = JsonTransformer.toJSON(
-    credentialRecord.credential.claimFormat === ClaimFormat.JwtVc
-      ? credentialRecord.credential.credential
-      : credentialRecord.credential
-  ) as W3cCredentialJson
-
-  const issuerDisplay = getW3cIssuerDisplay(credential, openId4VcMetadata)
-  const credentialDisplay = getW3cCredentialDisplay(credential, openId4VcMetadata)
-
-  // to be implimented later support credential with multiple subjects
-  const credentialAttributes = Array.isArray(credential.credentialSubject)
-    ? (credential.credentialSubject[0] ?? {})
-    : credential.credentialSubject
-
-  return {
-    id: `w3c-credential-${credentialRecord.id}` as CredentialForDisplayId,
-    createdAt: credentialRecord.createdAt,
-    display: {
-      ...credentialDisplay,
-      issuer: issuerDisplay,
-    },
-    credential,
-    attributes: credentialAttributes,
-  }
+  throw new Error('Unsupported format')
 }
 
 export function getOpenId4VcIssuerDisplay(

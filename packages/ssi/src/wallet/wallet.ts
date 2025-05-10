@@ -1,3 +1,4 @@
+import '@openwallet-foundation/askar-react-native'
 import {
   Agent,
   ConsoleLogger,
@@ -7,7 +8,6 @@ import {
 } from '@credo-ts/core'
 import { HttpOutboundTransport, WsOutboundTransport } from '@credo-ts/didcomm'
 import type { InitConfig, WalletConfig, WalletExportImportConfig } from '@credo-ts/core'
-
 import type { AdeyaAgentModules } from '../agent'
 import { AskarWallet } from '@credo-ts/askar'
 import { agentDependencies } from '@credo-ts/react-native'

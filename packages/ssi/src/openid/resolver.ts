@@ -15,12 +15,11 @@ import { credentialRecordFromCredential, encodeCredential } from '../format/cred
 import { setBatchCredentialMetadata } from './batchMetadata'
 import { getCredentialBindingResolver } from './credentialBindingResolver'
 import { extractOpenId4VcCredentialMetadata, setOpenId4VcCredentialMetadata } from './metadata'
-import type {
-  Agent,
-} from '@credo-ts/core'
+import type { AdeyaAgent } from '../agent'
+
 
 export type OpenID4VCIParam = {
-  agent: Agent
+  agent: AdeyaAgent
   data?: string
   uri?: string
 }
@@ -32,7 +31,7 @@ export async function resolveOpenId4VciOffer({
   customHeaders,
   fetchAuthorization = true,
 }: {
-  agent: Agent
+  agent: AdeyaAgent
   offer: { uri: string }
   authorization?: { clientId: string; redirectUri: string }
   customHeaders?: Record<string, unknown>
@@ -83,7 +82,7 @@ export async function acquirePreAuthorizedAccessToken({
   resolvedCredentialOffer,
   txCode,
 }: {
-  agent: Agent
+  agent: AdeyaAgent
   resolvedCredentialOffer: OpenId4VciResolvedCredentialOffer
   txCode?: string
 }) {
@@ -101,7 +100,7 @@ export async function acquireAuthorizationCodeAccessToken({
   clientId,
   redirectUri,
 }: {
-  agent: Agent
+  agent: AdeyaAgent
   resolvedCredentialOffer: OpenId4VciResolvedCredentialOffer
   codeVerifier?: string
   authorizationCode: string
@@ -126,7 +125,7 @@ export const receiveCredentialFromOpenId4VciOffer = async ({
   pidSchemes,
   requestBatch,
 }: {
-  agent: Agent
+  agent: AdeyaAgent
   resolvedCredentialOffer: OpenId4VciResolvedCredentialOffer
   credentialConfigurationIdsToRequest?: string[]
   clientId?: string

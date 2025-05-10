@@ -1,13 +1,27 @@
-import type { Agent, DifPexCredentialsForRequest } from '@credo-ts/core'
+import type { DifPexCredentialsForRequest, DifPresentationExchangeDefinitionV2 } from '@credo-ts/core'
+import type { AdeyaAgent } from '../agent'
 
-import { Jwt } from '@credo-ts/core'
-import type { OpenID4VCIParam } from './resolver'
-import type { OpenId4VPRequestRecord } from './displayProof'
-import type { OpenId4VciResolvedAuthorizationRequest } from '@credo-ts/openid4vc'
+import { ClaimFormat, Jwt } from '@credo-ts/core'
+import { type FormattedSubmissionEntry, type FormattedSubmissionEntrySatisfiedCredential, type FormattedSubmission, getAttributesAndMetadataForSdJwtPayload, getDisclosedAttributePathArrays } from './displayProof'
 import type { ParseInvitationResult } from './openIdHelpers'
 import { X509ModuleConfig } from '@credo-ts/core'
-import { getHostOpenIdNameFromUrl } from './openIdHelpers'
 import queryString from 'query-string'
+import { getCredentialForDisplay } from './display'
+import { JSONPath } from '@astronautlabs/jsonpath'
+
+export type TrustedX509Entity = { certificate: string; name: string; logoUri: string; url: string }
+export type GetCredentialsForProofRequestOptions = {
+  agent: AdeyaAgent
+  requestPayload?: Record<string, unknown>
+  uri?: string
+  allowUntrustedFederation?: boolean
+  origin?: string
+  trustedX509Entities?: TrustedX509Entity[]
+}
+export type NonEmptyArray<T> = [T, ...T[]]
+
+export type CredentialsForProofRequest = Awaited<ReturnType<typeof getOID4VCCredentialsForProofRequest>>
+
 
 function handleTextResponse(text: string): ParseInvitationResult {
   // If the text starts with 'ey' we assume it's a JWT and thus an OpenID authorization request
@@ -149,7 +163,7 @@ export const extractCertificateFromAuthorizationRequest = async ({
 }
 
 export async function withTrustedCertificate<T>(
-  agent: Agent,
+  agent: AdeyaAgent,
   certificate: string | null,
   method: () => Promise<T> | T
 ): Promise<T> {
@@ -168,108 +182,278 @@ export async function withTrustedCertificate<T>(
   }
 }
 
-//This settings should be moved to an injectable config
-const allowUntrustedCertificates = false
-
-export const getOID4VCCredentialsForProofRequest = async ({
-  agent,
-  data,
-  uri,
-}: OpenID4VCIParam): Promise<OpenId4VPRequestRecord | undefined> => {
-  let requestUri = uri
-
-  try {
-    const { certificate = null, data: newData = null } = allowUntrustedCertificates
-      ? await extractCertificateFromAuthorizationRequest({ data, uri })
-      : {}
-
-    if (newData) {
-      // FIXME: Credo only support request string, but we already parsed it before. So we construct an request here
-      // but in the future we need to support the parsed request in Credo directly
-      requestUri = `openid://?request=${encodeURIComponent(newData)}`
-    } else if (uri) {
-      requestUri = uri
-    } else {
-      throw new Error('Either data or uri must be provided')
-    }
-
-    agent.config.logger.info(`$$Receiving openid uri ${requestUri}`)
-
-    // Temp solution to add and remove the trusted certificate
-    const resolved = await withTrustedCertificate(agent, certificate, () => {
-      return agent.modules.openId4VcHolder.resolveSiopAuthorizationRequest(requestUri)
-    })
-    if (!resolved.presentationExchange) {
-      throw new Error('No presentation exchange found in authorization request.')
-    }
-    return {
-      ...resolved.presentationExchange,
-      authorizationRequest: resolved.authorizationRequest,
-      verifierHostName: resolved.authorizationRequest.responseURI
-        ? getHostOpenIdNameFromUrl(resolved.authorizationRequest.responseURI)
-        : undefined,
-      createdAt: new Date(),
-      type: 'OpenId4VPRequestRecord',
-    }
-  } catch (err) {
-    agent.config.logger.error(`Parsing presentation request:  ${(err as Error)?.message ?? err}`)
-    throw err
-  }
-}
-
 export const shareProof = async ({
   agent,
-  authorizationRequest,
-  credentialsForRequest,
+  resolvedRequest,
   selectedCredentials,
-  allowUntrustedCertificate = false,
+  acceptTransactionData,
 }: {
-  agent: Agent
-  authorizationRequest: OpenId4VciResolvedAuthorizationRequest
-  credentialsForRequest: DifPexCredentialsForRequest
-  selectedCredentials: Record<string, string>
-  allowUntrustedCertificate?: boolean
+  agent: AdeyaAgent
+  resolvedRequest: CredentialsForProofRequest
+  selectedCredentials: { [inputDescriptorId: string]: string }
+  // FIXME: Should be a more complex structure allowing which credential to use for which entry
+  acceptTransactionData?: boolean
 }) => {
-  if (!credentialsForRequest.areRequirementsSatisfied) {
+  const { authorizationRequest } = resolvedRequest
+  if (
+    !resolvedRequest.credentialsForRequest?.areRequirementsSatisfied &&
+    !resolvedRequest.queryResult?.canBeSatisfied
+  ) {
     throw new Error('Requirements from proof request are not satisfied')
   }
 
   // Map all requirements and entries to a credential record. If a credential record for an
   // input descriptor has been provided in `selectedCredentials` we will use that. Otherwise
   // it will pick the first available credential.
-  const credentials = Object.fromEntries(
-    credentialsForRequest.requirements.flatMap((requirement) =>
-      requirement.submissionEntry.map((entry) => {
-        const credentialId = selectedCredentials[entry.inputDescriptorId]
-        const credential =
-          entry.verifiableCredentials.find((vc) => vc.credentialRecord.id === credentialId) ??
-          entry.verifiableCredentials[0]
+  const presentationExchangeCredentials = resolvedRequest.credentialsForRequest
+    ? Object.fromEntries(
+        await Promise.all(
+          resolvedRequest.credentialsForRequest.requirements.flatMap((requirement) =>
+            requirement.submissionEntry.slice(0, requirement.needsCount).map(async (entry) => {
+              const credentialId = selectedCredentials[entry.inputDescriptorId]
+              const credential =
+                entry.verifiableCredentials.find((vc) => vc.credentialRecord.id === credentialId) ??
+                entry.verifiableCredentials[0]
 
-        return [entry.inputDescriptorId, [credential.credentialRecord]]
-      })
-    )
-  )
-  try {
-    // Temp solution to add and remove the trusted certicaite
-    const certificate =
-      authorizationRequest && allowUntrustedCertificate ? extractCertificateFromJwt(authorizationRequest.authorizationFlow) : null
+              return [entry.inputDescriptorId, [{ ...credential }]]
+            })
+          )
+        )
+      )
+    : undefined
 
-    const result = await withTrustedCertificate(agent, certificate, () =>
-      agent.modules.openId4VcHolder.acceptSiopAuthorizationRequest({
+
+    const result = await agent.modules.openId4VcHolder.acceptOpenId4VpAuthorizationRequest({
+      authorizationRequestPayload: authorizationRequest,
+      presentationExchange: presentationExchangeCredentials
+        ? {
+            credentials: presentationExchangeCredentials,
+          }
+        : undefined,
+      transactionData: undefined,
+      origin: resolvedRequest.origin,
+    })
+
+    if (result.serverResponse && (result.serverResponse.status < 200 || result.serverResponse.status > 299)) {
+      agent.config.logger.error('Error while accepting authorization request', {
         authorizationRequest,
-        presentationExchange: {
-          credentials,
-        },
+        response: result.authorizationResponse,
+        responsePayload: result.authorizationResponsePayload,
       })
-    )
-
-    if (result.serverResponse.status < 200 || result.serverResponse.status > 299) {
-      throw new Error(`Error while accepting authorization request. ${result.serverResponse.body as string}`)
+      throw new Error(
+        `Error while accepting authorization request. ${JSON.stringify(result.serverResponse.body, null, 2)}`
+      )
     }
 
     return result
+}
+
+export function formatDifPexCredentialsForRequest(
+  credentialsForRequest: DifPexCredentialsForRequest,
+  definition: DifPresentationExchangeDefinitionV2
+): FormattedSubmission {
+  const entries = credentialsForRequest.requirements.flatMap((requirement) => {
+    // We take the first needsCount entries. Even if not satisfied we will just show these first entries as missing (otherwise it becomes too complex)
+    // If selection is possible they can choose alternatives within that (otherwise it becomes too complex)
+    const submissionEntries = requirement.submissionEntry.slice(0, requirement.needsCount)
+
+    return submissionEntries.map((submission): FormattedSubmissionEntry => {
+      if (submission.verifiableCredentials.length >= 1) {
+        return {
+          inputDescriptorId: submission.inputDescriptorId,
+          name: submission.name,
+          description: submission.purpose,
+          isSatisfied: true,
+          credentials: submission.verifiableCredentials.map(
+            (verifiableCredential): FormattedSubmissionEntrySatisfiedCredential => {
+              const credentialForDisplay = getCredentialForDisplay(verifiableCredential.credentialRecord)
+
+              // By default the whole credential is disclosed
+              let disclosed: FormattedSubmissionEntrySatisfiedCredential['disclosed']
+              if (verifiableCredential.claimFormat === ClaimFormat.SdJwtVc) {
+                const { attributes, metadata } = getAttributesAndMetadataForSdJwtPayload(
+                  verifiableCredential.disclosedPayload
+                )
+                disclosed = {
+                  attributes,
+                  metadata,
+                  paths: getDisclosedAttributePathArrays(attributes, 2),
+                }
+              } else {
+                disclosed = {
+                  attributes: credentialForDisplay.attributes,
+                  metadata: credentialForDisplay.metadata,
+                  paths: getDisclosedAttributePathArrays(credentialForDisplay.attributes, 2),
+                }
+              }
+
+              return {
+                credential: credentialForDisplay,
+                disclosed,
+              }
+            }
+          ) as NonEmptyArray<FormattedSubmissionEntrySatisfiedCredential>,
+        }
+      }
+
+      // Try to determine requested attributes for credential
+      const inputDescriptor = definition.input_descriptors.find(({ id }) => id === submission.inputDescriptorId)
+      const requestedAttributePaths =
+        inputDescriptor?.constraints?.fields
+          ?.map((a) =>
+            simplifyJsonPath(a.path[0], inputDescriptor.format?.mso_mdoc ? ClaimFormat.MsoMdoc : undefined)?.filter(
+              (entry): entry is string => entry !== null
+            )
+          )
+          .filter((path): path is string[] => path !== undefined) ?? []
+
+      const docType = inputDescriptor?.format?.mso_mdoc ? inputDescriptor.id : undefined
+      const vctField = inputDescriptor?.format?.['vc+sd-jwt']
+        ? inputDescriptor.constraints.fields?.find((field) => field.path.includes('$.vct'))
+        : undefined
+      const vct = (vctField?.filter?.const ?? vctField?.filter?.enum?.[0]) as string | undefined
+
+      return {
+        inputDescriptorId: submission.inputDescriptorId,
+        name: requirement.name ?? docType ?? vct?.replace('https://', ''),
+        description: requirement.purpose,
+        isSatisfied: false,
+        requestedAttributePaths: requestedAttributePaths,
+      }
+    })
+  })
+
+  return {
+    areAllSatisfied: entries.every((entry) => entry.isSatisfied),
+    name: credentialsForRequest.name ?? 'unknown',
+    purpose: credentialsForRequest.purpose,
+    entries,
+  }
+}
+
+export const getOID4VCCredentialsForProofRequest = async ({
+  agent,
+  uri,
+  requestPayload,
+  allowUntrustedFederation = true,
+  origin,
+  trustedX509Entities,
+}: GetCredentialsForProofRequestOptions) => {
+  // const { entityId = undefined, data: fromFederationData = null } = allowUntrustedFederation
+  //   ? await extractEntityIdFromAuthorizationRequest({ uri, requestPayload, origin })
+  //   : {}
+
+  let request: string | Record<string, unknown>
+  if (uri) {
+    request = uri
+  } else if (requestPayload) {
+    request = requestPayload
+  } else {
+    throw new Error('Either requestPayload or uri must be provided')
+  }
+
+  agent.config.logger.info('Receiving openid request', {
+    request,
+  })
+
+  const resolved = await agent.modules.openId4VcHolder.resolveOpenId4VpAuthorizationRequest(request, {})
+
+  const { authorizationRequestPayload } = resolved
+  const clientMetadata = authorizationRequestPayload.client_metadata
+  const verifier = {
+    entity_id: authorizationRequestPayload.client_id ?? `web-origin:${origin}`,
+    uri:
+      typeof authorizationRequestPayload.response_uri === 'string'
+        ? new URL(authorizationRequestPayload.response_uri).origin
+        : undefined,
+    logo_uri: clientMetadata?.logo_uri,
+    organization_name: clientMetadata?.client_name,
+  }
+  let formattedSubmission: FormattedSubmission
+  if (resolved.presentationExchange) {
+    formattedSubmission = formatDifPexCredentialsForRequest(
+      resolved.presentationExchange.credentialsForRequest,
+      resolved.presentationExchange.definition as DifPresentationExchangeDefinitionV2
+    )
+  }else {
+    throw new Error('No presentation exchange or dcql found in authorization request.')
+  }
+
+  return {
+    ...resolved.presentationExchange,
+    ...resolved.dcql,
+    // FIXME: origin should be part of resolved from Credo, as it's also needed
+    // in the accept method now, which wouldn't be the case if we just add it to
+    // the resolved version
+    origin,
+    verifier: {
+      hostName: verifier.uri,
+      entityId: verifier.entity_id,
+      logo: verifier.logo_uri
+        ? {
+            url: verifier.logo_uri,
+          }
+        : undefined,
+      name: verifier.organization_name
+    },
+    authorizationRequest: resolved.authorizationRequestPayload,
+    formattedSubmission,
+    transactionData: resolved.transactionData,
+  } as const
+}
+
+function simplifyJsonPath(path: string, format?: ClaimFormat, filterKeys: string[] = []) {
+  try {
+    const parsedPath: Array<{
+      scope: string
+      operation: string
+      expression: { type: string; value: string; [key: string]: unknown }
+  }> = JSONPath.parse(path)
+
+    if (!Array.isArray(parsedPath)) {
+      return null
+    }
+
+    const simplified: Array<string | null> = []
+
+    if (format === ClaimFormat.MsoMdoc) {
+      if (parsedPath.length === 3) {
+        simplified.push(parsedPath[2].expression.value)
+      }
+    } else {
+      for (const entry of parsedPath) {
+        // Skip entries we want to remove
+        const value = entry.expression.value
+        if (['vc', 'vp', 'credentialSubject'].includes(value)) {
+          continue
+        }
+
+        // Remove root
+        if (entry.expression.type === 'root') {
+          continue
+        }
+
+        if (
+          entry.expression.type === 'wildcard' ||
+          (entry.expression.type === 'numeric_literal' && !Number.isNaN(value))
+        ) {
+          // Replace wildcards and numeric indices with null
+          simplified.push(null)
+        }
+
+        if (entry.expression.type === 'identifier' || entry.expression.type === 'string_literal') {
+          // Return the identifier value for normal entries
+          simplified.push(value)
+        }
+      }
+    }
+
+    if (filterKeys.some((key) => simplified.includes(key))) {
+      return null
+    }
+
+    return simplified
   } catch (error) {
-    // Handle biometric authentication errors
-    throw new Error(`Error accepting proof request. ${(error as Error)?.message ?? error}`)
+    return null
   }
 }

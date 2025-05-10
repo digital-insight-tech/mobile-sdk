@@ -128,9 +128,9 @@ export interface CredentialDisplay {
 
 export interface CredentialIssuerDisplay {
   name: string
+  domain?: string
   locale?: string
-  logo?: DisplayImage  | undefined
-  domain?: string | undefined
+  logo?: DisplayImage
 }
 
 export function getHostOpenIdNameFromUrl(url: string) {
@@ -173,8 +173,10 @@ export type W3cCredentialDisplay = {
   display: CredentialDisplay
   credential?: W3cCredentialJson
   attributes: W3cCredentialSubjectJson
-  metadata?: CredentialMetadata
-  claimFormat?: ClaimFormat
+  metadata: CredentialMetadata
+  claimFormat: ClaimFormat
+  validUntil: Date | undefined
+  validFrom: Date | undefined
 }
 
 export const isW3CCredentialRecord = (record: W3cCredentialRecord) => {
