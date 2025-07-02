@@ -101,6 +101,7 @@ import {
   W3cJsonLdVerifiableCredential,
   WebDidResolver,
   utils,
+  MdocRecord
 } from '@credo-ts/core'
 // import {
 //   GetCredentialsForRequestReturn,
@@ -204,6 +205,7 @@ export {
   PeerDidCreateOptions,
   JwkDidCreateOptions,
   SdJwtVcRecord,
+  MdocRecord
 }
 // Anoncreds
 export {

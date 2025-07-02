@@ -154,7 +154,7 @@ export const receiveCredentialFromOpenId4VciOffer = async ({
       credentialConfigurationIds: Object.keys(offeredCredentialsToRequest),
       verifyCredentialStatus: false,
       allowedProofOfPossessionSignatureAlgorithms: [JwaSignatureAlgorithm.ES256, JwaSignatureAlgorithm.EdDSA],
-      credentialBindingResolver: getCredentialBindingResolver(),
+      credentialBindingResolver: getCredentialBindingResolver(requestBatch),
     })
 
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>

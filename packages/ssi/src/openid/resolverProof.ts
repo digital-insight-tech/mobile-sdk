@@ -17,6 +17,7 @@ export type GetCredentialsForProofRequestOptions = {
   allowUntrustedFederation?: boolean
   origin?: string
   trustedX509Entities?: TrustedX509Entity[]
+  preferredLocale?: string
 }
 export type NonEmptyArray<T> = [T, ...T[]]
 
@@ -250,7 +251,8 @@ export const shareProof = async ({
 
 export function formatDifPexCredentialsForRequest(
   credentialsForRequest: DifPexCredentialsForRequest,
-  definition: DifPresentationExchangeDefinitionV2
+  definition: DifPresentationExchangeDefinitionV2,
+  preferredLocale?: string
 ): FormattedSubmission {
   const entries = credentialsForRequest.requirements.flatMap((requirement) => {
     // We take the first needsCount entries. Even if not satisfied we will just show these first entries as missing (otherwise it becomes too complex)
@@ -266,7 +268,7 @@ export function formatDifPexCredentialsForRequest(
           isSatisfied: true,
           credentials: submission.verifiableCredentials.map(
             (verifiableCredential): FormattedSubmissionEntrySatisfiedCredential => {
-              const credentialForDisplay = getCredentialForDisplay(verifiableCredential.credentialRecord)
+              const credentialForDisplay = getCredentialForDisplay(verifiableCredential.credentialRecord, preferredLocale)
 
               // By default the whole credential is disclosed
               let disclosed: FormattedSubmissionEntrySatisfiedCredential['disclosed']
@@ -338,6 +340,7 @@ export const getOID4VCCredentialsForProofRequest = async ({
   allowUntrustedFederation = true,
   origin,
   trustedX509Entities,
+  preferredLocale
 }: GetCredentialsForProofRequestOptions) => {
   // const { entityId = undefined, data: fromFederationData = null } = allowUntrustedFederation
   //   ? await extractEntityIdFromAuthorizationRequest({ uri, requestPayload, origin })
@@ -373,7 +376,8 @@ export const getOID4VCCredentialsForProofRequest = async ({
   if (resolved.presentationExchange) {
     formattedSubmission = formatDifPexCredentialsForRequest(
       resolved.presentationExchange.credentialsForRequest,
-      resolved.presentationExchange.definition as DifPresentationExchangeDefinitionV2
+      resolved.presentationExchange.definition as DifPresentationExchangeDefinitionV2,
+      preferredLocale
     )
   }else {
     throw new Error('No presentation exchange or dcql found in authorization request.')

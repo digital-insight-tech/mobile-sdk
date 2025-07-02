@@ -6,6 +6,7 @@ import {
 } from '@credo-ts/core'
 import {
   AnonCredsCredentialFormatService,
+  AnonCredsModule,
   AnonCredsProofFormatService,
   DataIntegrityCredentialFormatService,
   LegacyIndyCredentialFormatService,
@@ -20,6 +21,8 @@ import { QuestionAnswerModule } from '@credo-ts/question-answer'
 import { agentDependencies } from '@credo-ts/react-native'
 import { askar } from '@openwallet-foundation/askar-react-native'
 import { OpenId4VcHolderModule } from '@credo-ts/openid4vc'
+import { CheqdAnonCredsRegistry, CheqdModule, CheqdModuleConfig, CheqdDidResolver } from '@credo-ts/cheqd'
+import { anoncreds } from '@hyperledger/anoncreds-react-native'
 
 export type AdeyaAgentModuleOptions = {
   mediatorInvitationUrl?: string
@@ -38,7 +41,7 @@ export const getAgentModules = (options?: AdeyaAgentModuleOptions) => {
     }),
     dids: new DidsModule({
       registrars: [],
-      resolvers: [new WebDidResolver()],
+      resolvers: [new WebDidResolver(), new CheqdDidResolver()],
     }),
     didcomm: new DidCommModule(),
     credentials: new CredentialsModule({
@@ -81,7 +84,23 @@ export const getAgentModules = (options?: AdeyaAgentModuleOptions) => {
     discovery: new DiscoverFeaturesModule(),
     questionAnswer: new QuestionAnswerModule(),
     openId4VcHolder: new OpenId4VcHolderModule(),
-    x509: new X509Module()
+    x509: new X509Module(),
+    anoncreds: new AnonCredsModule({
+      registries: [new CheqdAnonCredsRegistry()],
+      anoncreds,
+    }),
+    cheqd: new CheqdModule(
+      new CheqdModuleConfig({
+        networks: [
+          {
+            network: 'testnet',
+          },
+          {
+            network: 'mainnet',
+          },
+        ],
+      })
+    ),
   }
 
   // Only add mediation if options are provided
@@ -114,7 +133,7 @@ export const initializeAgent = async ({
     },
     modules,
   })
-  
+
   agent.modules.didcomm.registerOutboundTransport(new HttpOutboundTransport())
   agent.modules.didcomm.registerOutboundTransport(new WsOutboundTransport())
 

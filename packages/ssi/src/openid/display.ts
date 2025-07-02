@@ -52,14 +52,36 @@ export interface CredentialForDisplay {
   hasRefreshToken: boolean
 }
 
-function findDisplay<Display extends { locale?: string; lang?: string }>(display?: Display[]): Display | undefined {
-  if (!display) return undefined
+function findDisplay<Display extends { locale?: string; lang?: string }>(
+  display?: Display[],
+  preferredLocale: string = 'en'
+): Display | undefined {
+  if (!display?.length) return undefined;
 
-  let item = display.find((d) => d.locale?.startsWith('en-') || d.lang?.startsWith('en-'))
-  if (!item) item = display.find((d) => !d.locale && !d.lang)
-  if (!item) item = display[0]
+  let item = display.find((d) => 
+    d.locale === preferredLocale || 
+    d.lang === preferredLocale
+  );
 
-  return item
+  if (!item && preferredLocale.includes('-')) {
+    const languageOnly = preferredLocale.split('-')[0];
+    item = display.find((d) => 
+      d.locale === languageOnly || 
+      d.lang === languageOnly
+    );
+  }
+
+  if (!item) {
+    item = display.find((d) => 
+      d.locale?.startsWith('en-') || 
+      d.lang?.startsWith('en-') || 
+      d.locale === 'en' || 
+      d.lang === 'en'
+    );
+  }
+
+  // Final fallback: first item or neutral locale
+  return item || display.find((d) => !d.locale && !d.lang) || display[0];
 }
 
 export function getCredentialDisplayWithDefaults(credentialDisplay?: Partial<CredentialDisplay>): CredentialDisplay {
@@ -74,13 +96,14 @@ export function getCredentialDisplayWithDefaults(credentialDisplay?: Partial<Cre
 }
 
 export function getIssuerDisplay(
-  metadata: OpenId4VcCredentialMetadata | null | undefined
+  metadata: OpenId4VcCredentialMetadata | null | undefined,
+  preferredLocale?: string
 ): Partial<CredentialIssuerDisplay> {
   const issuerDisplay: Partial<CredentialIssuerDisplay> = {};
 
   // Try to extract from openid metadata first
   const openidIssuerDisplay = findDisplay(
-    Array.isArray(metadata?.issuer?.display) ? metadata.issuer.display : undefined
+    Array.isArray(metadata?.issuer?.display) ? metadata.issuer.display : undefined, preferredLocale
   );
 
   issuerDisplay.name = openidIssuerDisplay?.name;
@@ -96,7 +119,7 @@ export function getIssuerDisplay(
 
   // Check and use credential display logo if issuerDisplay doesn't have one
   const openidCredentialDisplay = findDisplay(
-    Array.isArray(metadata?.credential?.display) ? metadata.credential.display : undefined
+    Array.isArray(metadata?.credential?.display) ? metadata.credential.display : undefined, preferredLocale
   );
 
   if (openidCredentialDisplay && !issuerDisplay.logo?.url && openidCredentialDisplay.logo) {
@@ -159,14 +182,15 @@ export function getSdJwtIssuerDisplay(openId4VcMetadata?: OpenId4VcCredentialMet
 
 export function getCredentialDisplay(
   credentialPayload: Record<string, unknown>,
-  openId4VcMetadata?: OpenId4VcCredentialMetadata | null
+  openId4VcMetadata?: OpenId4VcCredentialMetadata | null,
+  preferredLocale?: string
 ): Partial<CredentialDisplay> {
   const credentialDisplay: Partial<CredentialDisplay> = {};
 
   if (openId4VcMetadata) {
     const credentialDisplays = openId4VcMetadata.credential?.display;
     const openidCredentialDisplay = Array.isArray(credentialDisplays)
-      ? findDisplay(credentialDisplays)
+      ? findDisplay(credentialDisplays, preferredLocale)
       : undefined;
 
     credentialDisplay.name = openidCredentialDisplay?.name;
@@ -217,9 +241,10 @@ export function getW3cCredentialDisplay(
 }
 
 export function getSdJwtTypeMetadataCredentialDisplay(
-  sdJwtTypeMetadata: SdJwtVcTypeMetadata
+  sdJwtTypeMetadata: SdJwtVcTypeMetadata,
+  preferredLocale?: string
 ): Omit<CredentialDisplay, 'issuer' | 'name'> & { name?: string } {
-  const typeMetadataDisplay = findDisplay(sdJwtTypeMetadata.display)
+  const typeMetadataDisplay = findDisplay(sdJwtTypeMetadata.display, preferredLocale)
 
   // TODO: support SVG rendering method
 
@@ -242,16 +267,17 @@ export function getSdJwtTypeMetadataCredentialDisplay(
 export function getSdJwtCredentialDisplay(
   credentialPayload: Record<string, unknown>,
   openId4VcMetadata?: OpenId4VcCredentialMetadata | null,
-  typeMetadata?: SdJwtVcTypeMetadata | null
+  typeMetadata?: SdJwtVcTypeMetadata | null,
+  preferredLocal?: string
 ) {
   let credentialDisplay: Partial<CredentialDisplay> = {}
 
   // TODO: should we combine them? I think not really needed if you have one of them
   // Type metadata takes precendence.
   if (typeMetadata) {
-    credentialDisplay = getSdJwtTypeMetadataCredentialDisplay(typeMetadata)
+    credentialDisplay = getSdJwtTypeMetadataCredentialDisplay(typeMetadata, preferredLocal)
   } else if (openId4VcMetadata) {
-    credentialDisplay = getOpenId4VcCredentialDisplay(openId4VcMetadata)
+    credentialDisplay = getOpenId4VcCredentialDisplay(openId4VcMetadata, preferredLocal)
   }
 
   // If there's no name for the credential, we extract it from the last type
@@ -357,7 +383,8 @@ export function getDisclosedAttributeNamesForDisplay(credential: FormattedSubmis
 }
 
 export function getCredentialForDisplay(
-  credentialRecord: W3cCredentialRecord | SdJwtVcRecord | MdocRecord
+  credentialRecord: W3cCredentialRecord | SdJwtVcRecord | MdocRecord,
+  preferredLocale?: string
 ): CredentialForDisplay {
   const credentialCategoryMetadata = getCredentialCategoryMetadata(credentialRecord)
   const credentialForDisplayId = getCredentialForDisplayId(credentialRecord)
@@ -368,9 +395,9 @@ export function getCredentialForDisplay(
 
     const openId4VcMetadata = getOpenId4VcCredentialMetadata(credentialRecord)
     const sdJwtTypeMetadata = credentialRecord.typeMetadata
-    const issuerDisplay = getOpenId4VcIssuerDisplay(openId4VcMetadata)
+    const issuerDisplay = getOpenId4VcIssuerDisplay(openId4VcMetadata, preferredLocale)
 
-    const credentialDisplay = getSdJwtCredentialDisplay(sdJwtVc.prettyClaims, openId4VcMetadata, sdJwtTypeMetadata)
+    const credentialDisplay = getSdJwtCredentialDisplay(sdJwtVc.prettyClaims, openId4VcMetadata, sdJwtTypeMetadata, preferredLocale)
     const { attributes, metadata } = getAttributesAndMetadataForSdJwtPayload(sdJwtVc.prettyClaims)
 
     return {
@@ -449,13 +476,14 @@ export function getCredentialForDisplay(
 }
 
 export function getOpenId4VcIssuerDisplay(
-  openId4VcMetadata?: OpenId4VcCredentialMetadata | null
+  openId4VcMetadata?: OpenId4VcCredentialMetadata | null,
+  preferredLocale?: string
 ): CredentialIssuerDisplay {
   const issuerDisplay: Partial<CredentialIssuerDisplay> = {}
 
   // Try to extract from openid metadata first
   if (openId4VcMetadata) {
-    const openidIssuerDisplay = findDisplay(openId4VcMetadata.issuer.display)
+    const openidIssuerDisplay = findDisplay(openId4VcMetadata.issuer.display, preferredLocale)
 
     if (openidIssuerDisplay) {
       issuerDisplay.name = openidIssuerDisplay.name
@@ -469,7 +497,7 @@ export function getOpenId4VcIssuerDisplay(
     }
 
     // If the credentialDisplay contains a logo, and the issuerDisplay does not, use the logo from the credentialDisplay
-    const openidCredentialDisplay = findDisplay(openId4VcMetadata.credential.display)
+    const openidCredentialDisplay = findDisplay(openId4VcMetadata.credential.display, preferredLocale)
     if (openidCredentialDisplay && !issuerDisplay.logo && openidCredentialDisplay.logo) {
       issuerDisplay.logo = {
         url: openidCredentialDisplay.logo?.uri,
@@ -493,8 +521,8 @@ export function getOpenId4VcIssuerDisplay(
   }
 }
 
-export function getOpenId4VcCredentialDisplay(openId4VcMetadata: OpenId4VcCredentialMetadata) {
-  const openidCredentialDisplay = findDisplay(openId4VcMetadata.credential.display)
+export function getOpenId4VcCredentialDisplay(openId4VcMetadata: OpenId4VcCredentialMetadata, preferredLocale?: string) {
+  const openidCredentialDisplay = findDisplay(openId4VcMetadata.credential.display, preferredLocale)
 
   const credentialDisplay: Omit<CredentialDisplay, 'name'> & { name?: string } = {
     name: openidCredentialDisplay?.name,
@@ -506,7 +534,7 @@ export function getOpenId4VcCredentialDisplay(openId4VcMetadata: OpenId4VcCreden
           url: openidCredentialDisplay.background_image.uri,
         }
       : undefined,
-    issuer: getOpenId4VcIssuerDisplay(openId4VcMetadata),
+    issuer: getOpenId4VcIssuerDisplay(openId4VcMetadata, preferredLocale),
   }
 
   // NOTE: logo is used in issuer display (not sure if that's right though)
