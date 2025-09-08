@@ -34,6 +34,36 @@ import { AnonCredsCredentialMetadataKey } from '@credo-ts/anoncreds/build/utils/
 // Core
 import { AskarModule } from '@credo-ts/askar'
 import {
+  Agent,
+  Buffer,
+  CacheModule,
+  ClaimFormat,
+  ConsoleLogger,
+  CredoError,
+  DidDocument,
+  DidRecord,
+  DidRepository,
+  DidsModule,
+  DifPexCredentialsForRequest,
+  JsonTransformer,
+  JwkDidCreateOptions,
+  JwkDidRegistrar,
+  JwkDidResolver,
+  KeyDidCreateOptions,
+  KeyType,
+  LogLevel,
+  MdocRecord,
+  PeerDidCreateOptions,
+  Query,
+  SdJwtVcRecord,
+  SingleContextStorageLruCache,
+  TypedArrayEncoder,
+  W3cCredentialRecord,
+  W3cJsonLdVerifiableCredential,
+  WebDidResolver,
+  utils,
+} from '@credo-ts/core'
+import {
   AgentMessage,
   AutoAcceptCredential,
   AutoAcceptProof,
@@ -56,65 +86,35 @@ import {
   DidExchangeState,
   DifPresentationExchangeProofFormatService,
   GetCredentialFormatDataReturn,
+  GetCredentialsForProofRequestReturn, // TODO: Need to confim
   JsonLdCredentialFormatService,
   JsonLdFormatDataCredentialDetail,
+  MediationRecipientModule,
+  MediatorPickupStrategy,
+  OutOfBandRecord,
   ProofEventTypes,
   ProofExchangeRecord,
+  ProofFormatCredentialForRequestPayload, // TODO: Need to confim
   ProofFormatPayload,
   ProofState,
   ProofStateChangedEvent,
   ProofsModule,
-  MediationRecipientModule,
-  MediatorPickupStrategy,
-  OutOfBandRecord,
   V2CredentialProtocol,
   V2ProofProtocol,
-  GetCredentialsForProofRequestReturn, // TODO: Need to confim 
-  ProofFormatCredentialForRequestPayload // TODO: Need to confim 
 } from '@credo-ts/didcomm'
-import {
-  Agent,
-  Buffer,
-  CacheModule,
-  ClaimFormat,
-
-  ConsoleLogger,
-  CredoError,
-  DidDocument,
-  DidRecord,
-  DidRepository,
-  DidsModule,
-  DifPexCredentialsForRequest,
-  JsonTransformer,
-  JwkDidCreateOptions,
-  JwkDidRegistrar,
-  JwkDidResolver,
-  KeyDidCreateOptions,
-  KeyType,
-  LogLevel,
-  PeerDidCreateOptions,
-  Query,
-  SdJwtVcRecord,
-  SingleContextStorageLruCache,
-  TypedArrayEncoder,
-  W3cCredentialRecord,
-  W3cJsonLdVerifiableCredential,
-  WebDidResolver,
-  utils,
-  MdocRecord
-} from '@credo-ts/core'
 // import {
 //   GetCredentialsForRequestReturn,
 //   ProofFormatDataMessagePayload,
 // } from '@credo-ts/core'
 // Indy VDR
-import { 
-  OpenId4VcHolderModule, 
-  OpenId4VciRequestTokenResponse,
-  OpenId4VciResolvedCredentialOffer, 
+import {
+  OpenId4VcHolderModule,
   OpenId4VciAuthorizationFlow,
+  OpenId4VciRequestTokenResponse,
+  OpenId4VciResolvedAuthorizationRequest,
+  OpenId4VciResolvedCredentialOffer,
   OpenId4VciTxCode,
-  OpenId4VciResolvedAuthorizationRequest } from '@credo-ts/openid4vc'
+} from '@credo-ts/openid4vc'
 import { PushNotificationsFcmModule } from '@credo-ts/push-notifications'
 // Q&A
 import {
@@ -205,7 +205,7 @@ export {
   PeerDidCreateOptions,
   JwkDidCreateOptions,
   SdJwtVcRecord,
-  MdocRecord
+  MdocRecord,
 }
 // Anoncreds
 export {
@@ -243,13 +243,14 @@ export { QuestionAnswerRecord, QuestionAnswerEventTypes, QuestionAnswerStateChan
 //Basic message
 export { BasicMessageEventTypes, BasicMessageStateChangedEvent, BasicMessageRecord }
 //openIDC4VCI
-export { 
-  OpenId4VcHolderModule, 
+export {
+  OpenId4VcHolderModule,
   OpenId4VciRequestTokenResponse,
   OpenId4VciAuthorizationFlow,
-  OpenId4VciResolvedCredentialOffer, 
-  OpenId4VciResolvedAuthorizationRequest, 
+  OpenId4VciResolvedCredentialOffer,
+  OpenId4VciResolvedAuthorizationRequest,
   OpenId4VciTxCode,
-  recordsAddedByType, 
-  recordsRemovedByType 
+  recordsAddedByType,
+  recordsRemovedByType,
 }
+export { getSubmissionForMdocDocumentRequest } from './format/mdocRequest'

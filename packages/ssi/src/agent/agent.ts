@@ -1,10 +1,4 @@
 import {
-  Agent,
-  DidsModule,
-  WebDidResolver,
-  X509Module
-} from '@credo-ts/core'
-import {
   AnonCredsCredentialFormatService,
   AnonCredsModule,
   AnonCredsProofFormatService,
@@ -14,15 +8,37 @@ import {
   V1CredentialProtocol,
   V1ProofProtocol,
 } from '@credo-ts/anoncreds'
-import { AutoAcceptCredential, AutoAcceptProof, BasicMessagesModule, ConnectionsModule, CredentialsModule, DidCommModule, DifPresentationExchangeProofFormatService, DiscoverFeaturesModule, HttpOutboundTransport, JsonLdCredentialFormatService, MediationRecipientModule, type MediatorPickupStrategy, MessagePickupModule, OutOfBandModule, ProofsModule, V2CredentialProtocol, V2ProofProtocol, WsOutboundTransport } from '@credo-ts/didcomm'
 import { AskarModule } from '@credo-ts/askar'
+import { CheqdAnonCredsRegistry, CheqdDidResolver, CheqdModule, CheqdModuleConfig } from '@credo-ts/cheqd'
+import { Agent, DidsModule, WebDidResolver, X509Module } from '@credo-ts/core'
 import type { InitConfig } from '@credo-ts/core'
+import { GenericRecordsModule } from '@credo-ts/core/build/modules/generic-records'
+import {
+  AutoAcceptCredential,
+  AutoAcceptProof,
+  BasicMessagesModule,
+  ConnectionsModule,
+  CredentialsModule,
+  DidCommModule,
+  DifPresentationExchangeProofFormatService,
+  DiscoverFeaturesModule,
+  HttpOutboundTransport,
+  JsonLdCredentialFormatService,
+  MediationRecipientModule,
+  MediatorModule,
+  type MediatorPickupStrategy,
+  MessagePickupModule,
+  OutOfBandModule,
+  ProofsModule,
+  V2CredentialProtocol,
+  V2ProofProtocol,
+  WsOutboundTransport,
+} from '@credo-ts/didcomm'
+import { OpenId4VcHolderModule } from '@credo-ts/openid4vc'
 import { QuestionAnswerModule } from '@credo-ts/question-answer'
 import { agentDependencies } from '@credo-ts/react-native'
-import { askar } from '@openwallet-foundation/askar-react-native'
-import { OpenId4VcHolderModule } from '@credo-ts/openid4vc'
-import { CheqdAnonCredsRegistry, CheqdModule, CheqdModuleConfig, CheqdDidResolver } from '@credo-ts/cheqd'
 import { anoncreds } from '@hyperledger/anoncreds-react-native'
+import { askar } from '@openwallet-foundation/askar-react-native'
 
 export type AdeyaAgentModuleOptions = {
   mediatorInvitationUrl?: string
@@ -34,7 +50,7 @@ export type AdeyaAgentModules = ReturnType<typeof getAgentModules>
 
 export type AdeyaAgent = Agent<AdeyaAgentModules>
 
-export const getAgentModules = (options?: AdeyaAgentModuleOptions) => {
+export const getAgentModules = (options: AdeyaAgentModuleOptions) => {
   const modules = {
     askar: new AskarModule({
       askar,
@@ -78,7 +94,9 @@ export const getAgentModules = (options?: AdeyaAgentModuleOptions) => {
     connections: new ConnectionsModule({
       autoAcceptConnections: true,
     }),
+    
     basicMessages: new BasicMessagesModule(),
+    genericRecords: new GenericRecordsModule(),
     outOfBand: new OutOfBandModule(),
     messagePickup: new MessagePickupModule(),
     discovery: new DiscoverFeaturesModule(),
@@ -101,18 +119,14 @@ export const getAgentModules = (options?: AdeyaAgentModuleOptions) => {
         ],
       })
     ),
-  }
-
-  // Only add mediation if options are provided
-  if (options?.mediatorInvitationUrl && options?.mediatorPickupStrategy) {
-    return {
-      ...modules,
-      mediationRecipient: new MediationRecipientModule({
-        mediatorInvitationUrl: options.mediatorInvitationUrl,
-        mediatorPickupStrategy: options.mediatorPickupStrategy,
-        maximumMessagePickup: options.maximumMessagePickup ?? 5,
-      })
-    }
+    mediator: new MediatorModule({
+      autoAcceptMediationRequests: true,
+    }),
+    mediationRecipient: new MediationRecipientModule({
+      mediatorInvitationUrl: options.mediatorInvitationUrl,
+      mediatorPickupStrategy: options.mediatorPickupStrategy,
+      maximumMessagePickup: options.maximumMessagePickup ?? 5,
+    }),
   }
 
   return modules
@@ -138,6 +152,6 @@ export const initializeAgent = async ({
   agent.modules.didcomm.registerOutboundTransport(new WsOutboundTransport())
 
   await agent.initialize()
-
+  await agent.modules.mediationRecipient.initialize()
   return agent
 }

@@ -4,12 +4,10 @@ import type {
   CredentialProtocol,
   DeleteCredentialOptions,
   ProposeCredentialOptions,
-  SendCredentialProblemReportOptions
+  SendCredentialProblemReportOptions,
 } from '@credo-ts/didcomm'
 
-import type {
-  Agent,
-} from '@credo-ts/core'
+import type { Agent } from '@credo-ts/core'
 
 /**
  * Retrieves all credential exchange records from the agent.

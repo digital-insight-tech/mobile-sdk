@@ -13,9 +13,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "build"
-  ],
+  "files": ["build"],
   "scripts": {
     "check-types": "pnpm compile --noEmit",
     "build": "pnpm clean && pnpm compile",
@@ -23,6 +21,7 @@
     "compile": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
+    "@animo-id/mdoc": "0.5.2",
     "@credo-ts/anoncreds": "0.6.0-alpha-20250325224513",
     "@credo-ts/askar": "0.6.0-alpha-20250325224513",
     "@credo-ts/core": "0.6.0-alpha-20250325224513",

@@ -1,13 +1,19 @@
 import type { DifPexCredentialsForRequest, DifPresentationExchangeDefinitionV2 } from '@credo-ts/core'
 import type { AdeyaAgent } from '../agent'
 
+import { JSONPath } from '@astronautlabs/jsonpath'
 import { ClaimFormat, Jwt } from '@credo-ts/core'
-import { type FormattedSubmissionEntry, type FormattedSubmissionEntrySatisfiedCredential, type FormattedSubmission, getAttributesAndMetadataForSdJwtPayload, getDisclosedAttributePathArrays } from './displayProof'
-import type { ParseInvitationResult } from './openIdHelpers'
 import { X509ModuleConfig } from '@credo-ts/core'
 import queryString from 'query-string'
-import { getCredentialForDisplay } from './display'
-import { JSONPath } from '@astronautlabs/jsonpath'
+import { getAttributesAndMetadataForMdocPayload, getCredentialForDisplay } from './display'
+import {
+  type FormattedSubmission,
+  type FormattedSubmissionEntry,
+  type FormattedSubmissionEntrySatisfiedCredential,
+  getAttributesAndMetadataForSdJwtPayload,
+  getDisclosedAttributePathArrays,
+} from './displayProof'
+import type { ParseInvitationResult } from './openIdHelpers'
 
 export type TrustedX509Entity = { certificate: string; name: string; logoUri: string; url: string }
 export type GetCredentialsForProofRequestOptions = {
@@ -22,7 +28,6 @@ export type GetCredentialsForProofRequestOptions = {
 export type NonEmptyArray<T> = [T, ...T[]]
 
 export type CredentialsForProofRequest = Awaited<ReturnType<typeof getOID4VCCredentialsForProofRequest>>
-
 
 function handleTextResponse(text: string): ParseInvitationResult {
   // If the text starts with 'ey' we assume it's a JWT and thus an OpenID authorization request
@@ -223,30 +228,29 @@ export const shareProof = async ({
       )
     : undefined
 
+  const result = await agent.modules.openId4VcHolder.acceptOpenId4VpAuthorizationRequest({
+    authorizationRequestPayload: authorizationRequest,
+    presentationExchange: presentationExchangeCredentials
+      ? {
+          credentials: presentationExchangeCredentials,
+        }
+      : undefined,
+    transactionData: undefined,
+    origin: resolvedRequest.origin,
+  })
 
-    const result = await agent.modules.openId4VcHolder.acceptOpenId4VpAuthorizationRequest({
-      authorizationRequestPayload: authorizationRequest,
-      presentationExchange: presentationExchangeCredentials
-        ? {
-            credentials: presentationExchangeCredentials,
-          }
-        : undefined,
-      transactionData: undefined,
-      origin: resolvedRequest.origin,
+  if (result.serverResponse && (result.serverResponse.status < 200 || result.serverResponse.status > 299)) {
+    agent.config.logger.error('Error while accepting authorization request', {
+      authorizationRequest,
+      response: result.authorizationResponse,
+      responsePayload: result.authorizationResponsePayload,
     })
+    throw new Error(
+      `Error while accepting authorization request. ${JSON.stringify(result.serverResponse.body, null, 2)}`
+    )
+  }
 
-    if (result.serverResponse && (result.serverResponse.status < 200 || result.serverResponse.status > 299)) {
-      agent.config.logger.error('Error while accepting authorization request', {
-        authorizationRequest,
-        response: result.authorizationResponse,
-        responsePayload: result.authorizationResponsePayload,
-      })
-      throw new Error(
-        `Error while accepting authorization request. ${JSON.stringify(result.serverResponse.body, null, 2)}`
-      )
-    }
-
-    return result
+  return result
 }
 
 export function formatDifPexCredentialsForRequest(
@@ -268,7 +272,10 @@ export function formatDifPexCredentialsForRequest(
           isSatisfied: true,
           credentials: submission.verifiableCredentials.map(
             (verifiableCredential): FormattedSubmissionEntrySatisfiedCredential => {
-              const credentialForDisplay = getCredentialForDisplay(verifiableCredential.credentialRecord, preferredLocale)
+              const credentialForDisplay = getCredentialForDisplay(
+                verifiableCredential.credentialRecord,
+                preferredLocale
+              )
 
               // By default the whole credential is disclosed
               let disclosed: FormattedSubmissionEntrySatisfiedCredential['disclosed']
@@ -280,6 +287,14 @@ export function formatDifPexCredentialsForRequest(
                   attributes,
                   metadata,
                   paths: getDisclosedAttributePathArrays(attributes, 2),
+                }
+              } else if (verifiableCredential.claimFormat === ClaimFormat.MsoMdoc) {
+                disclosed = {
+                  ...getAttributesAndMetadataForMdocPayload(
+                    verifiableCredential.disclosedPayload,
+                    verifiableCredential.credentialRecord.credential
+                  ),
+                  paths: getDisclosedAttributePathArrays(verifiableCredential.disclosedPayload, 2),
                 }
               } else {
                 disclosed = {
@@ -340,7 +355,7 @@ export const getOID4VCCredentialsForProofRequest = async ({
   allowUntrustedFederation = true,
   origin,
   trustedX509Entities,
-  preferredLocale
+  preferredLocale,
 }: GetCredentialsForProofRequestOptions) => {
   // const { entityId = undefined, data: fromFederationData = null } = allowUntrustedFederation
   //   ? await extractEntityIdFromAuthorizationRequest({ uri, requestPayload, origin })
@@ -379,7 +394,7 @@ export const getOID4VCCredentialsForProofRequest = async ({
       resolved.presentationExchange.definition as DifPresentationExchangeDefinitionV2,
       preferredLocale
     )
-  }else {
+  } else {
     throw new Error('No presentation exchange or dcql found in authorization request.')
   }
 
@@ -398,7 +413,7 @@ export const getOID4VCCredentialsForProofRequest = async ({
             url: verifier.logo_uri,
           }
         : undefined,
-      name: verifier.organization_name
+      name: verifier.organization_name,
     },
     authorizationRequest: resolved.authorizationRequestPayload,
     formattedSubmission,
@@ -412,7 +427,7 @@ function simplifyJsonPath(path: string, format?: ClaimFormat, filterKeys: string
       scope: string
       operation: string
       expression: { type: string; value: string; [key: string]: unknown }
-  }> = JSONPath.parse(path)
+    }> = JSONPath.parse(path)
 
     if (!Array.isArray(parsedPath)) {
       return null

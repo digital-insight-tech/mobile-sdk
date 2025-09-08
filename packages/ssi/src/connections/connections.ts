@@ -1,16 +1,14 @@
-import {
+import type {
   AgentMessage,
   ConnectionInvitationMessage,
   CreateLegacyInvitationConfig,
   CreateOutOfBandInvitationConfig,
   OutOfBandInvitation,
   ReceiveOutOfBandInvitationConfig,
-  Routing
+  Routing,
 } from '@credo-ts/didcomm'
 
-import type {
-  Agent
-} from '@credo-ts/core'
+import type { Agent } from '@credo-ts/core'
 
 /**
  * Creates an invitation with RFC 0160: Connection Protocol and returns it together with out-of-band record and invitationUrl.

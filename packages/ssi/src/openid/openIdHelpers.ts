@@ -1,17 +1,19 @@
 import {
   ClaimFormat,
+  MdocRepository,
   SdJwtVcRecord,
   SdJwtVcRepository,
   W3cCredentialRecord,
   W3cCredentialRepository,
 } from '@credo-ts/core'
 
-import type { Agent } from '@credo-ts/core'
+import { type Agent, MdocRecord } from '@credo-ts/core'
 import type { CredentialExchangeRecord } from '@credo-ts/didcomm'
 import type { CredentialMetadata } from './displayProof'
 import { getOID4VCCredentialsForProofRequest } from './resolverProof'
 
 export type GenericCredentialExchangeRecord = CredentialExchangeRecord | W3cCredentialRecord | SdJwtVcRecord
+export type CredentialRecord = W3cCredentialRecord | SdJwtVcRecord | MdocRecord
 
 export enum InvitationQrTypesSupported {
   OPENID = 'openid://',
@@ -148,7 +150,7 @@ export const sanitizeString = (str: string) => {
   return words.join(' ')
 }
 
-export type CredentialForDisplayId = `w3c-credential-${string}` | `sd-jwt-vc-${string}`
+export type CredentialForDisplayId = `w3c-credential-${string}` | `sd-jwt-vc-${string}` | `mdoc-${string}`
 
 export type W3cIssuerJson = {
   id: string
@@ -245,12 +247,23 @@ function checkAgent(agent: Agent) {
   }
 }
 
-export async function storeOpenIdCredential(agent: Agent, cred: W3cCredentialRecord | SdJwtVcRecord): Promise<void> {
-  checkAgent(agent)
-  if (cred instanceof W3cCredentialRecord) {
-    await agent?.dependencyManager.resolve(W3cCredentialRepository).save(agent.context, cred)
+export async function storeOpenIdCredential(agent: Agent, credentialRecord: CredentialRecord) {
+  if (credentialRecord instanceof W3cCredentialRecord) {
+    await agent.dependencyManager.resolve(W3cCredentialRepository).save(agent.context, credentialRecord)
+  } else if (credentialRecord instanceof MdocRecord) {
+    await agent.dependencyManager.resolve(MdocRepository).save(agent.context, credentialRecord)
   } else {
-    await agent?.dependencyManager.resolve(SdJwtVcRepository).save(agent.context, cred)
+    await agent.dependencyManager.resolve(SdJwtVcRepository).save(agent.context, credentialRecord)
+  }
+}
+
+export async function updateCredential(agent: Agent, credentialRecord: CredentialRecord) {
+  if (credentialRecord instanceof W3cCredentialRecord) {
+    await agent.dependencyManager.resolve(W3cCredentialRepository).update(agent.context, credentialRecord)
+  } else if (credentialRecord instanceof MdocRecord) {
+    await agent.dependencyManager.resolve(MdocRepository).update(agent.context, credentialRecord)
+  } else {
+    await agent.dependencyManager.resolve(SdJwtVcRepository).update(agent.context, credentialRecord)
   }
 }
 

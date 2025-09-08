@@ -1,22 +1,21 @@
+import { JwaSignatureAlgorithm } from '@credo-ts/core'
 import type {
   OpenId4VciCredentialConfigurationSupportedWithFormats,
   OpenId4VciRequestTokenResponse,
   OpenId4VciResolvedAuthorizationRequest,
   OpenId4VciResolvedCredentialOffer,
 } from '@credo-ts/openid4vc'
-import { JwaSignatureAlgorithm } from '@credo-ts/core'
 import {
   getOfferedCredentials,
   getScopesFromCredentialConfigurationsSupported,
   preAuthorizedCodeGrantIdentifier,
 } from '@credo-ts/openid4vc'
 
+import type { AdeyaAgent } from '../agent'
 import { credentialRecordFromCredential, encodeCredential } from '../format/credentialEncoding'
 import { setBatchCredentialMetadata } from './batchMetadata'
 import { getCredentialBindingResolver } from './credentialBindingResolver'
 import { extractOpenId4VcCredentialMetadata, setOpenId4VcCredentialMetadata } from './metadata'
-import type { AdeyaAgent } from '../agent'
-
 
 export type OpenID4VCIParam = {
   agent: AdeyaAgent
@@ -129,10 +128,8 @@ export const receiveCredentialFromOpenId4VciOffer = async ({
   resolvedCredentialOffer: OpenId4VciResolvedCredentialOffer
   credentialConfigurationIdsToRequest?: string[]
   clientId?: string
-  pidSchemes?: { sdJwtVcVcts: Array<string>; msoMdocDoctypes: Array<string> }
+  pidSchemes?: { sdJwtVcVcts: Array<string>; msoMdocDoctypes: Array<string> } | undefined
   requestBatch?: boolean | number
-
-  // TODO: cNonce should maybe be provided separately (multiple calls can have different c_nonce values)
   accessToken: OpenId4VciRequestTokenResponse
 }) => {
   const offeredCredentialsToRequest = getOfferedCredentials(
@@ -147,45 +144,45 @@ export const receiveCredentialFromOpenId4VciOffer = async ({
       `Parameter 'credentialConfigurationIdsToRequest' with values ${credentialConfigurationIdsToRequest} is not a credential_configuration_id in the credential offer.`
     )
   }
-    const credentials = await agent.modules.openId4VcHolder.requestCredentials({
-      resolvedCredentialOffer,
-      ...accessToken,
-      clientId,
-      credentialConfigurationIds: Object.keys(offeredCredentialsToRequest),
-      verifyCredentialStatus: false,
-      allowedProofOfPossessionSignatureAlgorithms: [JwaSignatureAlgorithm.ES256, JwaSignatureAlgorithm.EdDSA],
-      credentialBindingResolver: getCredentialBindingResolver(requestBatch),
+  const credentials = await agent.modules.openId4VcHolder.requestCredentials({
+    resolvedCredentialOffer,
+    ...accessToken,
+    clientId,
+    credentialConfigurationIds: Object.keys(offeredCredentialsToRequest),
+    verifyCredentialStatus: false,
+    allowedProofOfPossessionSignatureAlgorithms: [JwaSignatureAlgorithm.ES256, JwaSignatureAlgorithm.EdDSA],
+    credentialBindingResolver: getCredentialBindingResolver(pidSchemes, requestBatch),
+  })
+
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  return credentials.credentials.map(({ credentials, ...credentialResponse }: any) => {
+    const configuration = resolvedCredentialOffer.offeredCredentialConfigurations[
+      credentialResponse.credentialConfigurationId
+    ] as OpenId4VciCredentialConfigurationSupportedWithFormats
+
+    const firstCredential = credentials[0]
+    const record = credentialRecordFromCredential(firstCredential)
+
+    // OpenID4VC metadata
+    const openId4VcMetadata = extractOpenId4VcCredentialMetadata(configuration, {
+      id: resolvedCredentialOffer.metadata.credentialIssuer.credential_issuer,
+      display: resolvedCredentialOffer.metadata.credentialIssuer.display,
     })
+    setOpenId4VcCredentialMetadata(record, openId4VcMetadata)
 
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    return credentials.credentials.map(({ credentials, ...credentialResponse }: any) => {
-      const configuration = resolvedCredentialOffer.offeredCredentialConfigurations[
-        credentialResponse.credentialConfigurationId
-      ] as OpenId4VciCredentialConfigurationSupportedWithFormats
-
-      const firstCredential = credentials[0]
-      const record = credentialRecordFromCredential(firstCredential)
-
-      // OpenID4VC metadata
-      const openId4VcMetadata = extractOpenId4VcCredentialMetadata(configuration, {
-        id: resolvedCredentialOffer.metadata.credentialIssuer.credential_issuer,
-        display: resolvedCredentialOffer.metadata.credentialIssuer.display,
+    // Match metadata
+    if (credentials.length > 1) {
+      setBatchCredentialMetadata(record, {
+        additionalCredentials: credentials.slice(1).map(encodeCredential) as
+          | Array<string>
+          | Array<Record<string, unknown>>,
       })
-      setOpenId4VcCredentialMetadata(record, openId4VcMetadata)
+    }
 
-      // Match metadata
-      if (credentials.length > 1) {
-        setBatchCredentialMetadata(record, {
-          additionalCredentials: credentials.slice(1).map(encodeCredential) as
-            | Array<string>
-            | Array<Record<string, unknown>>,
-        })
-      }
-
-      return {
-        ...credentialResponse,
-        configuration,
-        credential: record,
-      }
-    })
+    return {
+      ...credentialResponse,
+      configuration,
+      credential: record,
+    }
+  })
 }

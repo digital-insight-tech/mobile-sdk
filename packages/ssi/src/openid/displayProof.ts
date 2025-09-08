@@ -1,11 +1,9 @@
-
-
-import { DateOnly, Hasher, TypedArrayEncoder, type JwkJson } from '@credo-ts/core'
-import type { DifPexCredentialsForRequest, } from '@credo-ts/core'
+import { DateOnly, Hasher, type JwkJson, TypedArrayEncoder } from '@credo-ts/core'
+import type { DifPexCredentialsForRequest } from '@credo-ts/core'
 import type { OpenId4VpResolvedAuthorizationRequest } from '@credo-ts/openid4vc'
-import type { CredentialForDisplay } from './display'
 import { formatDate, isDateString } from '../utils/format'
-import { detectImageMimeType  } from '../utils/image'
+import { detectImageMimeType } from '../utils/image'
+import type { CredentialForDisplay } from './display'
 export interface FormattedSubmissionEntrySatisfiedCredential {
   credential: CredentialForDisplay
 
@@ -30,7 +28,7 @@ type MappedAttributesReturnType =
   | Array<MappedAttributesReturnType>
 
 export interface FormattedSubmission {
-  name: string
+  name?: string
   purpose?: string
   areAllSatisfied: boolean
   entries: FormattedSubmissionEntry[]
@@ -50,7 +48,7 @@ export interface OpenId4VPRequestRecord extends OpenId4VpResolvedAuthorizationRe
 
 export interface CredentialMetadata {
   type: string
-  issuer: string
+  issuer?: string
   holder?: string
   validUntil?: string
   validFrom?: string
@@ -141,7 +139,7 @@ export function getAttributesAndMetadataForSdJwtPayload(sdJwtVcPayload: Record<s
   }
   const { _sd_alg, _sd_hash, iss, vct, cnf, iat, exp, nbf, ...visibleProperties } = sdJwtVcPayload as SdJwtVcPayload
 
-  const holder = cnf.kid ?? cnf.jwk ? safeCalculateJwkThumbprint(cnf.jwk as JwkJson) : undefined
+  const holder = (cnf.kid ?? cnf.jwk) ? safeCalculateJwkThumbprint(cnf.jwk as JwkJson) : undefined
   const credentialMetadata: CredentialMetadata = {
     type: vct,
     issuer: iss,

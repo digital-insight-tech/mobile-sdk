@@ -9,12 +9,10 @@ import type {
   ProposeProofOptions,
   RequestProofOptions,
   SelectCredentialsForProofRequestOptions,
-  SendProofProblemReportOptions
+  SendProofProblemReportOptions,
 } from '@credo-ts/didcomm'
 
-import type {
-  Agent,
-} from '@credo-ts/core'
+import type { Agent } from '@credo-ts/core'
 
 /**
  * Retrieves the formatted data for a proof record with the given ID.
