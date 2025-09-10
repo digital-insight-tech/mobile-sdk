@@ -6,8 +6,7 @@ import type {
   ProposeCredentialOptions,
   SendCredentialProblemReportOptions,
 } from '@credo-ts/didcomm'
-
-import type { Agent } from '@credo-ts/core'
+import { AdeyaAgent } from '../agent'
 
 /**
  * Retrieves all credential exchange records from the agent.
@@ -15,7 +14,7 @@ import type { Agent } from '@credo-ts/core'
  * @param agent The agent instance to use for retrieving the credential exchange records.
  * @returns A promise that resolves to an array of credential exchange records.
  */
-export const getAllCredentialExchangeRecords = async (agent: Agent) => {
+export const getAllCredentialExchangeRecords = async (agent: AdeyaAgent) => {
   return agent.modules.credentials.getAll()
 }
 
@@ -26,7 +25,7 @@ export const getAllCredentialExchangeRecords = async (agent: Agent) => {
  * @param credentialRecordId The ID of the credential record to retrieve formatted data for.
  * @returns A Promise that resolves with the formatted data for the given credential record ID.
  */
-export const getFormattedCredentialData = async (agent: Agent, credentialRecordId: string) => {
+export const getFormattedCredentialData = async (agent: AdeyaAgent, credentialRecordId: string) => {
   return agent.modules.credentials.getFormatData(credentialRecordId)
 }
 
@@ -37,7 +36,7 @@ export const getFormattedCredentialData = async (agent: Agent, credentialRecordI
  * @param options - The options for proposing the credential.
  * @returns A promise that resolves with the proposed credential.
  */
-export const proposeCredential = async (agent: Agent, options: ProposeCredentialOptions<[]>) => {
+export const proposeCredential = async (agent: AdeyaAgent, options: ProposeCredentialOptions<[]>) => {
   return agent.modules.credentials.proposeCredential(options)
 }
 
@@ -49,7 +48,7 @@ export const proposeCredential = async (agent: Agent, options: ProposeCredential
  * @returns A promise that resolves with the accepted credential.
  */
 export const acceptCredentialOffer = async <CredentialProtocols extends CredentialProtocol[]>(
-  agent: Agent,
+  agent: AdeyaAgent,
   options: AcceptCredentialOfferOptions<CredentialProtocols>
 ) => {
   return agent.modules.credentials.acceptOffer(options)
@@ -62,7 +61,7 @@ export const acceptCredentialOffer = async <CredentialProtocols extends Credenti
  * @param credentialRecord The credential exchange record to update.
  * @returns A promise that resolves with the updated credential exchange record.
  */
-export const updateCredentialExchangeRecord = async (agent: Agent, credentialRecord: CredentialExchangeRecord) => {
+export const updateCredentialExchangeRecord = async (agent: AdeyaAgent, credentialRecord: CredentialExchangeRecord) => {
   return agent.modules.credentials.update(credentialRecord)
 }
 
@@ -73,7 +72,7 @@ export const updateCredentialExchangeRecord = async (agent: Agent, credentialRec
  * @param credentialId The ID of the credential offer to decline.
  * @returns A Promise that resolves CredentialExchangeRecord when the credential offer has been declined.
  */
-export const declineCredentialOffer = async (agent: Agent, credentialId: string) => {
+export const declineCredentialOffer = async (agent: AdeyaAgent, credentialId: string) => {
   return agent.modules.credentials.declineOffer(credentialId)
 }
 
@@ -87,7 +86,7 @@ export const declineCredentialOffer = async (agent: Agent, credentialId: string)
  * @returns void
  */
 export const deleteCredentialExchangeRecordById = async (
-  agent: Agent,
+  agent: AdeyaAgent,
   credentialRecordId: string,
   options?: DeleteCredentialOptions
 ) => {
@@ -101,7 +100,7 @@ export const deleteCredentialExchangeRecordById = async (
  * @param options - The options for sending the problem report.
  * @returns A Promise that resolves CredentialExchangeRecord when the problem report has been sent.
  */
-export const sendCredentialProblemReport = async (agent: Agent, options: SendCredentialProblemReportOptions) => {
+export const sendCredentialProblemReport = async (agent: AdeyaAgent, options: SendCredentialProblemReportOptions) => {
   return agent.modules.credentials.sendProblemReport(options)
 }
 
@@ -114,7 +113,7 @@ export const sendCredentialProblemReport = async (agent: Agent, options: SendCre
  * @param credentialRecordId The ID of the credential record to retrieve.
  * @returns A Promise that resolves to the retrieved w3c credential record.
  */
-export const getW3cCredentialRecordById = async (agent: Agent, credentialRecordId: string) => {
+export const getW3cCredentialRecordById = async (agent: AdeyaAgent, credentialRecordId: string) => {
   return agent.w3cCredentials.getCredentialRecordById(credentialRecordId)
 }
 
@@ -123,6 +122,6 @@ export const getW3cCredentialRecordById = async (agent: Agent, credentialRecordI
  *
  * @returns A promise that resolves to an array of W3C credential records.
  */
-export const getAllW3cCredentialRecords = async (agent: Agent) => {
+export const getAllW3cCredentialRecords = async (agent: AdeyaAgent) => {
   return agent.w3cCredentials.getAllCredentialRecords()
 }

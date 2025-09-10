@@ -35,6 +35,7 @@ import {
   WsOutboundTransport,
 } from '@credo-ts/didcomm'
 import { OpenId4VcHolderModule } from '@credo-ts/openid4vc'
+import { PushNotificationsFcmModule } from '@credo-ts/push-notifications'
 import { QuestionAnswerModule } from '@credo-ts/question-answer'
 import { agentDependencies } from '@credo-ts/react-native'
 import { anoncreds } from '@hyperledger/anoncreds-react-native'
@@ -94,10 +95,10 @@ export const getAgentModules = (options: AdeyaAgentModuleOptions) => {
     connections: new ConnectionsModule({
       autoAcceptConnections: true,
     }),
-    
+
     basicMessages: new BasicMessagesModule(),
     genericRecords: new GenericRecordsModule(),
-    outOfBand: new OutOfBandModule(),
+    oob: new OutOfBandModule(),
     messagePickup: new MessagePickupModule(),
     discovery: new DiscoverFeaturesModule(),
     questionAnswer: new QuestionAnswerModule(),

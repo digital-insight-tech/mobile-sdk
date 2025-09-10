@@ -1,5 +1,6 @@
-import type { Agent, Query } from '@credo-ts/core'
+import type { Query } from '@credo-ts/core'
 import type { QuestionAnswerRecord, ValidResponse } from '@credo-ts/question-answer'
+import { AdeyaAgent } from '../agent'
 
 export type SendQuestionConfig = {
   question: string
@@ -14,7 +15,7 @@ export type SendQuestionConfig = {
  * @param connectionId The connection id.
  * @param config The question to send.
  */
-export const sendQuestion = async (agent: Agent, connectionId: string, config: SendQuestionConfig) => {
+export const sendQuestion = async (agent: AdeyaAgent, connectionId: string, config: SendQuestionConfig) => {
   return agent.modules.questionAnswer.sendQuestion(connectionId, config)
 }
 
@@ -25,7 +26,7 @@ export const sendQuestion = async (agent: Agent, connectionId: string, config: S
  * @param questionRecordId The question record id.
  * @param response The response to send.
  */
-export const sendAnswer = async (agent: Agent, questionRecordId: string, response: string) => {
+export const sendAnswer = async (agent: AdeyaAgent, questionRecordId: string, response: string) => {
   return agent.modules.questionAnswer.sendAnswer(questionRecordId, response)
 }
 
@@ -35,7 +36,7 @@ export const sendAnswer = async (agent: Agent, questionRecordId: string, respons
  * @param agent The agent instance.
  * @param query The query to use to find the question record.
  */
-export const getAllQuestionAnswerRecords = async (agent: Agent, query: Query<QuestionAnswerRecord>) => {
+export const getAllQuestionAnswerRecords = async (agent: AdeyaAgent, query: Query<QuestionAnswerRecord>) => {
   return agent.modules.questionAnswer.findAllByQuery(query)
 }
 
@@ -45,6 +46,6 @@ export const getAllQuestionAnswerRecords = async (agent: Agent, query: Query<Que
  * @param agent The agent instance.
  * @param questionAnswerRecordId The question record id.
  */
-export const getQuestionAnswerRecordById = async (agent: Agent, questionRecordId: string) => {
+export const getQuestionAnswerRecordById = async (agent: AdeyaAgent, questionRecordId: string) => {
   return agent.modules.questionAnswer.findById(questionRecordId)
 }

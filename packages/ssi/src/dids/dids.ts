@@ -1,4 +1,5 @@
-import type { Agent, DidCreateOptions, DidResolutionOptions, ImportDidOptions } from '@credo-ts/core'
+import type { DidCreateOptions, DidResolutionOptions, ImportDidOptions } from '@credo-ts/core'
+import { AdeyaAgent } from '../agent'
 
 /**
  * Create a new DID.
@@ -6,7 +7,7 @@ import type { Agent, DidCreateOptions, DidResolutionOptions, ImportDidOptions } 
  * @param agent The agent instance.
  * @returns A promise that resolves to the created DID.
  */
-export const createDid = async <T extends DidCreateOptions = DidCreateOptions>(agent: Agent, options: T) => {
+export const createDid = async <T extends DidCreateOptions = DidCreateOptions>(agent: AdeyaAgent, options: T) => {
   return agent.dids.create<T>(options)
 }
 
@@ -18,7 +19,7 @@ export const createDid = async <T extends DidCreateOptions = DidCreateOptions>(a
  * @param options The options for resolving the DID.
  * @returns A promise that resolves to the resolved DID.
  */
-export const resolveDid = async (agent: Agent, did: string, options?: DidResolutionOptions) => {
+export const resolveDid = async (agent: AdeyaAgent, did: string, options?: DidResolutionOptions) => {
   return agent.dids.resolve(did, options)
 }
 
@@ -29,7 +30,7 @@ export const resolveDid = async (agent: Agent, did: string, options?: DidResolut
  * @param did The DID to resolve.
  * @returns A promise that resolves to the resolved DID Document.
  */
-export const resolveDidDocument = async (agent: Agent, didUrl: string) => {
+export const resolveDidDocument = async (agent: AdeyaAgent, didUrl: string) => {
   return agent.dids.resolveDidDocument(didUrl)
 }
 
@@ -40,7 +41,7 @@ export const resolveDidDocument = async (agent: Agent, didUrl: string) => {
  * @returns A promise that resolves to an array of DIDs.
  */
 export const getCreatedDids = async (
-  agent: Agent,
+  agent: AdeyaAgent,
   options?: { method?: string | undefined; did?: string | undefined }
 ) => {
   return agent.dids.getCreatedDids(options)
@@ -52,7 +53,7 @@ export const getCreatedDids = async (
  * @param agent The agent instance.
  * @returns void.
  */
-export const importDid = async (agent: Agent, options: ImportDidOptions) => {
+export const importDid = async (agent: AdeyaAgent, options: ImportDidOptions) => {
   return agent.dids.import(options)
 }
 
@@ -62,7 +63,7 @@ export const importDid = async (agent: Agent, options: ImportDidOptions) => {
  * @param agent The agent instance.
  * @returns supported did registrar methods.
  */
-export const getSupportedDidRegistrarMethods = async (agent: Agent) => {
+export const getSupportedDidRegistrarMethods = async (agent: AdeyaAgent) => {
   return agent.dids.supportedRegistrarMethods
 }
 
@@ -72,6 +73,6 @@ export const getSupportedDidRegistrarMethods = async (agent: Agent) => {
  * @param agent The agent instance.
  * @returns supported did resolver methods.
  */
-export const getSupportedDidResolverMethods = async (agent: Agent) => {
+export const getSupportedDidResolverMethods = async (agent: AdeyaAgent) => {
   return agent.dids.supportedResolverMethods
 }

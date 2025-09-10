@@ -1,4 +1,5 @@
-import type { Agent, StoreCredentialOptions, W3cJsonLdSignCredentialOptions } from '@credo-ts/core'
+import type { StoreCredentialOptions, W3cJsonLdSignCredentialOptions } from '@credo-ts/core'
+import { AdeyaAgent } from '../agent'
 
 // W3C Credential
 
@@ -9,7 +10,7 @@ import type { Agent, StoreCredentialOptions, W3cJsonLdSignCredentialOptions } fr
  * @param W3cJsonLdSignCredentialOptions The format of the credential to be signed.
  * @returns A Promise that resolves to signed w3c credential .
  */
-export const signCredential = async (agent: Agent, options: W3cJsonLdSignCredentialOptions) => {
+export const signCredential = async (agent: AdeyaAgent, options: W3cJsonLdSignCredentialOptions) => {
   return await agent.w3cCredentials.signCredential(options)
 }
 
@@ -20,6 +21,6 @@ export const signCredential = async (agent: Agent, options: W3cJsonLdSignCredent
  * @param StoreCredentialOptions The format of the credential to be stored.
  * @returns A Promise that resolves to stored w3c credential.
  */
-export const storeCredential = async (agent: Agent, options: StoreCredentialOptions) => {
+export const storeCredential = async (agent: AdeyaAgent, options: StoreCredentialOptions) => {
   return await agent.w3cCredentials.storeCredential(options)
 }

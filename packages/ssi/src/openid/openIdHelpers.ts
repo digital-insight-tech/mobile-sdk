@@ -7,10 +7,11 @@ import {
   W3cCredentialRepository,
 } from '@credo-ts/core'
 
-import { type Agent, MdocRecord } from '@credo-ts/core'
+import { MdocRecord } from '@credo-ts/core'
 import type { CredentialExchangeRecord } from '@credo-ts/didcomm'
 import type { CredentialMetadata } from './displayProof'
 import { getOID4VCCredentialsForProofRequest } from './resolverProof'
+import { AdeyaAgent } from '../agent'
 
 export type GenericCredentialExchangeRecord = CredentialExchangeRecord | W3cCredentialRecord | SdJwtVcRecord
 export type CredentialRecord = W3cCredentialRecord | SdJwtVcRecord | MdocRecord
@@ -193,8 +194,8 @@ export type OpenIDCredentialRecord = W3cCredentialRecord | SdJwtVcRecord | undef
 
 export type OpenIDCredentialContext = {
   openIdState: OpenIDCredentialRecordState
-  storeOpenIdCredential: (agent: Agent, cred: W3cCredentialRecord | SdJwtVcRecord) => Promise<void>
-  removeCredential: (agent: Agent, cred: W3cCredentialRecord | SdJwtVcRecord) => Promise<void>
+  storeOpenIdCredential: (agent: AdeyaAgent, cred: W3cCredentialRecord | SdJwtVcRecord) => Promise<void>
+  removeCredential: (agent: AdeyaAgent, cred: W3cCredentialRecord | SdJwtVcRecord) => Promise<void>
 }
 
 export type OpenIDCredentialRecordState = {
@@ -240,14 +241,14 @@ export const defaultState: OpenIDCredentialRecordState = {
   isLoading: true,
 }
 
-function checkAgent(agent: Agent) {
+function checkAgent(agent: AdeyaAgent) {
   if (!agent) {
     const error = 'Agent undefined!'
     throw new Error(error)
   }
 }
 
-export async function storeOpenIdCredential(agent: Agent, credentialRecord: CredentialRecord) {
+export async function storeOpenIdCredential(agent: AdeyaAgent, credentialRecord: CredentialRecord) {
   if (credentialRecord instanceof W3cCredentialRecord) {
     await agent.dependencyManager.resolve(W3cCredentialRepository).save(agent.context, credentialRecord)
   } else if (credentialRecord instanceof MdocRecord) {
@@ -257,7 +258,7 @@ export async function storeOpenIdCredential(agent: Agent, credentialRecord: Cred
   }
 }
 
-export async function updateCredential(agent: Agent, credentialRecord: CredentialRecord) {
+export async function updateCredential(agent: AdeyaAgent, credentialRecord: CredentialRecord) {
   if (credentialRecord instanceof W3cCredentialRecord) {
     await agent.dependencyManager.resolve(W3cCredentialRepository).update(agent.context, credentialRecord)
   } else if (credentialRecord instanceof MdocRecord) {
@@ -267,7 +268,7 @@ export async function updateCredential(agent: Agent, credentialRecord: Credentia
   }
 }
 
-export async function removeCredential(agent: Agent, cred: W3cCredentialRecord | SdJwtVcRecord) {
+export async function removeCredential(agent: AdeyaAgent, cred: W3cCredentialRecord | SdJwtVcRecord) {
   checkAgent(agent)
   if (cred instanceof W3cCredentialRecord) {
     await agent?.w3cCredentials.removeCredentialRecord(cred.id)
@@ -276,13 +277,13 @@ export async function removeCredential(agent: Agent, cred: W3cCredentialRecord |
   }
 }
 
-export const resolveOpenIDPresentationRequest = async (uri: string, agent: Agent) => {
+export const resolveOpenIDPresentationRequest = async (uri: string, agent: AdeyaAgent) => {
   if (!agent) {
     return
   }
   try {
     const record = await getOID4VCCredentialsForProofRequest({
-      agent: agent,
+      agent,
       uri: uri,
     })
     return record

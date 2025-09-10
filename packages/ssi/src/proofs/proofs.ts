@@ -11,8 +11,8 @@ import type {
   SelectCredentialsForProofRequestOptions,
   SendProofProblemReportOptions,
 } from '@credo-ts/didcomm'
+import { AdeyaAgent } from '../agent'
 
-import type { Agent } from '@credo-ts/core'
 
 /**
  * Retrieves the formatted data for a proof record with the given ID.
@@ -21,8 +21,8 @@ import type { Agent } from '@credo-ts/core'
  * @param proofRecordId The ID of the proof record to retrieve format data for.
  * @returns A Promise that resolves with the format data for the proof record.
  */
-export const getProofFormatData = async (agent: Agent, proofRecordId: string) => {
-  return agent.modules.proof.getFormatData(proofRecordId)
+export const getProofFormatData = async (agent: AdeyaAgent, proofRecordId: string) => {
+  return agent.modules.proofs.getFormatData(proofRecordId)
 }
 
 /**
@@ -33,10 +33,10 @@ export const getProofFormatData = async (agent: Agent, proofRecordId: string) =>
  * @returns A Promise that resolves with the credentials for the proof request.
  */
 export const getCredentialsForProofRequest = async <ProofProtocols extends ProofProtocol[] = ProofProtocol[]>(
-  agent: Agent,
+  agent: AdeyaAgent,
   options: GetCredentialsForProofRequestOptions<ProofProtocols>
 ) => {
-  return agent.modules.proof.getCredentialsForRequest(options)
+  return agent.modules.proofs.getCredentialsForRequest(options)
 }
 
 /**
@@ -47,10 +47,10 @@ export const getCredentialsForProofRequest = async <ProofProtocols extends Proof
  * @returns A promise that resolves to the selected credentials.
  */
 export const selectCredentialsForProofRequest = async <ProofProtocols extends ProofProtocol[] = ProofProtocol[]>(
-  agent: Agent,
+  agent: AdeyaAgent,
   options: SelectCredentialsForProofRequestOptions<ProofProtocols>
 ) => {
-  return agent.modules.proof.selectCredentialsForRequest(options)
+  return agent.modules.proofs.selectCredentialsForRequest(options)
 }
 
 /**
@@ -60,8 +60,8 @@ export const selectCredentialsForProofRequest = async <ProofProtocols extends Pr
  * @param proofRecordId The ID of the proof record to retrieve the request message for.
  * @returns A Promise that resolves to the proof request message.
  */
-export const getProofRequestAgentMessage = async (agent: Agent, proofRecordId: string) => {
-  return agent.modules.proof.findRequestMessage(proofRecordId)
+export const getProofRequestAgentMessage = async (agent: AdeyaAgent, proofRecordId: string) => {
+  return agent.modules.proofs.findRequestMessage(proofRecordId)
 }
 
 /**
@@ -71,8 +71,8 @@ export const getProofRequestAgentMessage = async (agent: Agent, proofRecordId: s
  * @param options - The options for proposing the proof.
  * @returns A promise that resolves with the proposed proof.
  */
-export const proposeProof = async (agent: Agent, options: ProposeProofOptions<DefaultProofProtocols>) => {
-  return agent.modules.proof.proposeProof(options)
+export const proposeProof = async (agent: AdeyaAgent, options: ProposeProofOptions<DefaultProofProtocols>) => {
+  return agent.modules.proofs.proposeProof(options)
 }
 
 /**
@@ -82,8 +82,8 @@ export const proposeProof = async (agent: Agent, options: ProposeProofOptions<De
  * @param options - The options for creating the proof request.
  * @returns A promise that resolves to the created proof request.
  */
-export const createProofRequest = async (agent: Agent, options: CreateProofRequestOptions<DefaultProofProtocols>) => {
-  return agent.modules.proof.createRequest(options)
+export const createProofRequest = async (agent: AdeyaAgent, options: CreateProofRequestOptions<DefaultProofProtocols>) => {
+  return agent.modules.proofs.createRequest(options)
 }
 
 /**
@@ -93,8 +93,8 @@ export const createProofRequest = async (agent: Agent, options: CreateProofReque
  * @param options - The options for requesting the proof.
  * @returns A Promise that resolves with the ProofExchangeRecord
  */
-export const requestProof = async (agent: Agent, options: RequestProofOptions<DefaultProofProtocols>) => {
-  return agent.modules.proof.requestProof(options)
+export const requestProof = async (agent: AdeyaAgent, options: RequestProofOptions<DefaultProofProtocols>) => {
+  return agent.modules.proofs.requestProof(options)
 }
 
 /**
@@ -104,8 +104,8 @@ export const requestProof = async (agent: Agent, options: RequestProofOptions<De
  * @param proofRecord The proof exchange record to update.
  * @returns void.
  */
-export const updateProofRecord = (agent: Agent, proofRecord: ProofExchangeRecord) => {
-  return agent.modules.proof.update(proofRecord)
+export const updateProofRecord = (agent: AdeyaAgent, proofRecord: ProofExchangeRecord) => {
+  return agent.modules.proofs.update(proofRecord)
 }
 
 /**
@@ -116,10 +116,10 @@ export const updateProofRecord = (agent: Agent, proofRecord: ProofExchangeRecord
  * @returns A Promise that resolves with the result of accepting the proof request.
  */
 export const acceptProofRequest = async <ProofProtocols extends ProofProtocol[] = ProofProtocol[]>(
-  agent: Agent,
+  agent: AdeyaAgent,
   options: AcceptProofRequestOptions<ProofProtocols>
 ) => {
-  return agent.modules.proof.acceptRequest(options)
+  return agent.modules.proofs.acceptRequest(options)
 }
 
 /**
@@ -129,8 +129,8 @@ export const acceptProofRequest = async <ProofProtocols extends ProofProtocol[] 
  * @param options - The options for declining the proof request.
  * @returns A Promise that resolves ProofExchangeRecord of declining the proof request.
  */
-export const declineProofRequest = async (agent: Agent, options: DeclineProofRequestOptions) => {
-  return agent.modules.proof.declineRequest(options)
+export const declineProofRequest = async (agent: AdeyaAgent, options: DeclineProofRequestOptions) => {
+  return agent.modules.proofs.declineRequest(options)
 }
 
 /**
@@ -139,6 +139,6 @@ export const declineProofRequest = async (agent: Agent, options: DeclineProofReq
  * @param options - The options for sending the problem report.
  * @returns A Promise that resolves ProofExchangeRecord when the problem report has been sent.
  */
-export const sendProofProblemReport = async (agent: Agent, options: SendProofProblemReportOptions) => {
-  return agent.modules.proof.sendProblemReport(options)
+export const sendProofProblemReport = async (agent: AdeyaAgent, options: SendProofProblemReportOptions) => {
+  return agent.modules.proofs.sendProblemReport(options)
 }

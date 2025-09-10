@@ -4,7 +4,7 @@ import { Agent, ConsoleLogger, LogLevel, SigningProviderRegistry, utils } from '
 import type { InitConfig, WalletConfig, WalletExportImportConfig } from '@credo-ts/core'
 import { HttpOutboundTransport, WsOutboundTransport } from '@credo-ts/didcomm'
 import { agentDependencies } from '@credo-ts/react-native'
-import type { AdeyaAgentModules } from '../agent'
+import type { AdeyaAgent, AdeyaAgentModules } from '../agent'
 
 interface WalletImportConfigWithAgent {
   agentConfig: InitConfig
@@ -42,7 +42,7 @@ export const isWalletPinCorrect = async (walletConfig: WalletConfig) => {
  * @param agent The agent.
  * @param exportConfig The configuration for exporting the wallet.
  */
-export const exportWallet = async (agent: Agent, exportConfig: WalletExportImportConfig) => {
+export const exportWallet = async (agent: AdeyaAgent, exportConfig: WalletExportImportConfig) => {
   await agent.wallet.export(exportConfig)
 }
 

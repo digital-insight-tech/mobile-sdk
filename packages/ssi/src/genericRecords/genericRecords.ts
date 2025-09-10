@@ -1,8 +1,9 @@
-import type { Agent, Query } from '@credo-ts/core'
+import type { Query } from '@credo-ts/core'
 import type {
   GenericRecord,
   SaveGenericRecordOption,
 } from '@credo-ts/core/build/modules/generic-records/repository/GenericRecord'
+import { AdeyaAgent } from '../agent'
 
 /**
  * Retrieves all credential exchange records from the agent.
@@ -10,7 +11,7 @@ import type {
  * @param agent The agent instance to use for retrieving the credential exchange records.
  * @returns A promise that resolves to an array of credential exchange records.
  */
-export const addWalletRecord = async (agent: Agent, options: SaveGenericRecordOption) => {
+export const addWalletRecord = async (agent: AdeyaAgent, options: SaveGenericRecordOption) => {
   return agent.genericRecords.save(options)
 }
 
@@ -20,7 +21,7 @@ export const addWalletRecord = async (agent: Agent, options: SaveGenericRecordOp
  * @param id The ID of the generic record to retrieve.
  * @returns A Promise that resolves with the generic record for the given ID.
  */
-export const findWalletRecordById = async (agent: Agent, id: string) => {
+export const findWalletRecordById = async (agent: AdeyaAgent, id: string) => {
   return agent.genericRecords.findById(id)
 }
 
@@ -30,7 +31,7 @@ export const findWalletRecordById = async (agent: Agent, id: string) => {
  * @param agent The agent instance to use for retrieving the generic records.
  * @returns A promise that resolves to an array of generic records.
  */
-export const getAllWalletRecords = async (agent: Agent) => {
+export const getAllWalletRecords = async (agent: AdeyaAgent) => {
   return agent.genericRecords.getAll()
 }
 
@@ -41,7 +42,7 @@ export const getAllWalletRecords = async (agent: Agent) => {
  * @param record The generic record to update.
  * @returns A promise that resolves with the updated generic record.
  */
-export const updateWalletRecord = async (agent: Agent, record: GenericRecord) => {
+export const updateWalletRecord = async (agent: AdeyaAgent, record: GenericRecord) => {
   return agent.genericRecords.update(record)
 }
 
@@ -52,7 +53,7 @@ export const updateWalletRecord = async (agent: Agent, record: GenericRecord) =>
  * @param record The generic record to delete.
  * @returns A promise that resolves with the deleted generic record.
  */
-export const deleteWalletRecord = async (agent: Agent, record: GenericRecord) => {
+export const deleteWalletRecord = async (agent: AdeyaAgent, record: GenericRecord) => {
   return agent.genericRecords.delete(record)
 }
 
@@ -63,7 +64,7 @@ export const deleteWalletRecord = async (agent: Agent, record: GenericRecord) =>
  * @param id The ID of the generic record to delete.
  * @returns A promise that resolves with the deleted generic record.
  */
-export const deleteWalletRecordById = async (agent: Agent, id: string) => {
+export const deleteWalletRecordById = async (agent: AdeyaAgent, id: string) => {
   return agent.genericRecords.deleteById(id)
 }
 
@@ -74,6 +75,6 @@ export const deleteWalletRecordById = async (agent: Agent, id: string) => {
  * @param query The query to use for retrieving the generic records.
  * @returns A promise that resolves to an array of generic records.
  */
-export const findWalletRecordsByQuery = async (agent: Agent, query: Query<GenericRecord>) => {
+export const findWalletRecordsByQuery = async (agent: AdeyaAgent, query: Query<GenericRecord>) => {
   return agent.genericRecords.findAllByQuery(query)
 }
