@@ -101,6 +101,7 @@ import {
   ProofsModule,
   V2CredentialProtocol,
   V2ProofProtocol,
+  ReceiveOutOfBandInvitationConfig
 } from '@credo-ts/didcomm'
 // import {
 //   GetCredentialsForRequestReturn,
@@ -205,6 +206,7 @@ export {
   JwkDidCreateOptions,
   SdJwtVcRecord,
   MdocRecord,
+  ReceiveOutOfBandInvitationConfig
 }
 // Anoncreds
 export {
