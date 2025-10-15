@@ -29,6 +29,7 @@ import {
   V1CredentialProtocol,
   V1ProofProtocol,
   V1RequestPresentationMessage,
+  AnonCredsSelectedCredentials,
 } from '@credo-ts/anoncreds'
 import { AnonCredsCredentialMetadataKey } from '@credo-ts/anoncreds/build/utils/metadata'
 // Core
@@ -101,7 +102,8 @@ import {
   ProofsModule,
   V2CredentialProtocol,
   V2ProofProtocol,
-  ReceiveOutOfBandInvitationConfig
+  ReceiveOutOfBandInvitationConfig,
+  V2RequestPresentationMessage,
 } from '@credo-ts/didcomm'
 // import {
 //   GetCredentialsForRequestReturn,
@@ -234,6 +236,8 @@ export {
   AnonCredsCredentialFormatService,
   V1ProofProtocol,
   AnonCredsCredentialInfo,
+  V2RequestPresentationMessage,
+  AnonCredsSelectedCredentials
 }
 // Askar
 export { AskarModule }

@@ -10,7 +10,7 @@ import {
 } from '@credo-ts/anoncreds'
 import { AskarModule } from '@credo-ts/askar'
 import { CheqdAnonCredsRegistry, CheqdDidResolver, CheqdModule, CheqdModuleConfig } from '@credo-ts/cheqd'
-import { Agent, DidsModule, WebDidResolver, X509Module } from '@credo-ts/core'
+import { Agent, DidsModule, W3cCredentialsModule, WebDidResolver, X509Module } from '@credo-ts/core'
 import type { InitConfig } from '@credo-ts/core'
 import { GenericRecordsModule } from '@credo-ts/core/build/modules/generic-records'
 import {
@@ -128,6 +128,7 @@ export const getAgentModules = (options: AdeyaAgentModuleOptions) => {
       mediatorPickupStrategy: options.mediatorPickupStrategy,
       maximumMessagePickup: options.maximumMessagePickup ?? 5,
     }),
+    w3cCredential: new W3cCredentialsModule()
   }
 
   return modules
