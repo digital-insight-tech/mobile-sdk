@@ -31,6 +31,12 @@ yarn add @credebl/ssi-mobile
 pnpm add @credebl/ssi-mobile
 ```
 
+## Generate a .tgz file for local development
+```sha
+pnpm build && pnpm pack
+```
+This command creates a file named credebl-ssi-mobile-*.tgz
+
 ## Peer Dependencies
 
 - We also need to add the peer dependencies of this package to our App.
